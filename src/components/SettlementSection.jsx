@@ -1,29 +1,18 @@
-import React from "react";
-import { Box, Typography } from "@mui/material";
+// src/components/SettlementSection.jsx
+import React from 'react';
+import '../App.css'; // or './SettlementSection.css'
 
-export default function SettlementSection({ items, billInfo, participants, settlement }) {
+function SettlementSection() {
+  // This could receive props (like total, whether everything is settled, etc.)
   return (
-    <Box sx={{ mb: 3 }}>
-      <Typography variant="h6" gutterBottom>
-        4. Settlement
-      </Typography>
-
-      {settlement.length === 0 ? (
-        <Typography>All settled! No transactions needed.</Typography>
-      ) : (
-        <Box component="ul" sx={{ pl: 4 }}>
-          {settlement.map((txn, i) => (
-            <li key={i}>
-              {txn.from} pays {txn.to} ${txn.amount}
-            </li>
-          ))}
-        </Box>
-      )}
-
-      {/* Optionally, show final total from billInfo */}
-      <Typography variant="subtitle1" sx={{ mt: 2 }}>
-        Final Total: ${billInfo.totalAmount.toFixed(2)}
-      </Typography>
-    </Box>
+    <section className="sectionContainer">
+      <h2>4. Settlement</h2>
+      <div style={{ marginTop: '1rem' }}>
+        <p>All settled! No transactions needed.</p>
+        <p>Final Total: $26.65</p>
+      </div>
+    </section>
   );
 }
+
+export default SettlementSection;

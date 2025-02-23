@@ -1,113 +1,82 @@
-import React from "react";
-import {
-  Box,
-  Typography,
-  Button,
-  Table,
-  TableBody,
-  TableHead,
-  TableRow,
-  TableCell,
-  TextField,
-} from "@mui/material";
+// src/components/ParticipantsSection.jsx
+import React from 'react';
+import '../App.css'; // or './ParticipantsSection.css'
 
-export default function ParticipantsSection({ participants, setParticipants }) {
-  const handleAddParticipant = () => {
-    setParticipants((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        name: `Participant ${prev.length + 1}`,
-        amountPaid: 0,
-        amountOwed: 0,
-      },
-    ]);
+function ParticipantsSection({
+  participants,
+  setParticipants,
+  handleAddParticipant,
+  handleRemoveParticipant,
+  handleRecalculate
+}) {
+  const handlePaidChange = (id, value) => {
+    setParticipants(
+      participants.map((p) =>
+        p.id === id ? { ...p, amountPaid: parseFloat(value) || 0 } : p
+      )
+    );
   };
 
-  const handleRemoveParticipant = (id) => {
-    setParticipants((prev) => prev.filter((p) => p.id !== id));
-  };
-
-  const handleParticipantChange = (id, field, value) => {
-    setParticipants((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, [field]: value } : p))
+  const handleNameChange = (id, value) => {
+    setParticipants(
+      participants.map((p) =>
+        p.id === id ? { ...p, name: value } : p
+      )
     );
   };
 
   return (
-    <Box>
-      <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
-        3. Participants
-      </Typography>
+    <section className="sectionContainer">
+      <h2>3. Participants</h2>
+      <button onClick={handleAddParticipant} className="addButton">
+        ADD PARTICIPANT
+      </button>
 
-      <Button 
-        variant="contained" 
-        onClick={handleAddParticipant} 
-        sx={{ mb: 3 }}
-      >
-        Add Participant
-      </Button>
-
-      <Table sx={{ minWidth: 650 }}>
-        <TableHead>
-          <TableRow>
-            <TableCell>Name</TableCell>
-            <TableCell align="center">Amount Paid</TableCell>
-            <TableCell align="center">Amount Owed (auto)</TableCell>
-            <TableCell align="center">Actions</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
+      <table className="participantsTable">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Amount Paid</th>
+            <th>Amount Owed</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
           {participants.map((p) => (
-            <TableRow key={p.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-              <TableCell>
-                <TextField
-                  size="small"
+            <tr key={p.id}>
+              <td>
+                <input
+                  type="text"
                   value={p.name}
-                  onChange={(e) => handleParticipantChange(p.id, "name", e.target.value)}
-                  placeholder="Enter name"
-                  fullWidth
+                  onChange={(e) => handleNameChange(p.id, e.target.value)}
                 />
-              </TableCell>
-              <TableCell align="center">
-                <TextField
+              </td>
+              <td>
+                <input
                   type="number"
-                  size="small"
                   value={p.amountPaid}
-                  onChange={(e) => handleParticipantChange(p.id, "amountPaid", parseFloat(e.target.value))}
-                  InputProps={{
-                    startAdornment: <Typography sx={{ mr: 0.5 }}>$</Typography>,
-                  }}
-                  sx={{ width: '120px' }}
+                  onChange={(e) => handlePaidChange(p.id, e.target.value)}
                 />
-              </TableCell>
-              <TableCell align="center">
-                <Typography color="text.secondary">
-                  ${p.amountOwed.toFixed(2)}
-                </Typography>
-              </TableCell>
-              <TableCell align="center">
-                <Button
-                  variant="outlined"
-                  color="error"
+              </td>
+              <td>${p.amountOwed.toFixed(2)}</td>
+              <td>
+                <button
                   onClick={() => handleRemoveParticipant(p.id)}
-                  size="small"
+                  className="removeButton"
                 >
-                  Remove
-                </Button>
-              </TableCell>
-            </TableRow>
+                  REMOVE
+                </button>
+              </td>
+            </tr>
           ))}
-        </TableBody>
-      </Table>
+        </tbody>
+      </table>
 
-      {participants.length === 0 && (
-        <Box sx={{ textAlign: 'center', mt: 2 }}>
-          <Typography color="text.secondary">
-            No participants added yet. Add participants to start splitting the bill.
-          </Typography>
-        </Box>
-      )}
-    </Box>
+      <button onClick={handleRecalculate} className="recalculateButton">
+        RECALCULATE AMOUNT OWED
+      </button>
+    </section>
   );
 }
+
+export default ParticipantsSection;

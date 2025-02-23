@@ -1,114 +1,141 @@
-import React from "react";
-import { Box, Typography, TextField, Grid } from "@mui/material";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
+// src/components/BillDetails.jsx
+import React, { useState } from 'react';
+import '../App.css';
 
-export default function BillDetails({ billInfo, setBillInfo, onUploadReceipt }) {
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setBillInfo((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
+function BillDetails({
+  billName, setBillName,
+  amount, setAmount,
+  billDate, setBillDate,
+  location, setLocation,
+  paidBy, setPaidBy,
+  notes, setNotes,
+  receiptFile, setReceiptFile,
+  participants, // your existing participants array, e.g. from ParticipantsSection
+  billParticipants, // the currently selected participants from App
+  onBillParticipantsChange
+}) {
+  // We'll track local checkboxes for "Add Participants"
+  // If you already have a custom multi-select, adapt the logic accordingly.
+  // For demonstration, let's assume you have participants with IDs 1..N.
+  // We'll map them to "Participant 1", "Participant 2", etc.
 
-  const handleDateChange = (date) => {
-    setBillInfo((prev) => ({
-      ...prev,
-      billDate: date,
-    }));
+  // We can store them as strings for convenience:
+  const allNames = ['Participant 1', 'Participant 2', 'Participant 3'];
+
+  // If you want your 6 fixed names, just do:
+  // const allNames = ["naman", "charu", "gaurav", "chetan", "parchi", "Mayank"];
+
+  // Local state mirrors the parent's billParticipants
+  const [localSelected, setLocalSelected] = useState(billParticipants || []);
+
+  // Toggling a name
+  const handleToggleName = (name) => {
+    let updated;
+    if (localSelected.includes(name)) {
+      updated = localSelected.filter((n) => n !== name);
+    } else {
+      updated = [...localSelected, name];
+    }
+    setLocalSelected(updated);
+    // Also tell parent
+    onBillParticipantsChange(updated);
   };
 
   return (
-    <Box>
-      <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
-        1. Bill Details
-      </Typography>
+    <section className="sectionContainer">
+      <h2>1. Bill Details</h2>
+      <div className="billDetailsCard">
+        {/* Bill Name */}
+        <div className="inputRow">
+          <label>Bill Name / Title</label>
+          <input
+            type="text"
+            value={billName}
+            onChange={(e) => setBillName(e.target.value)}
+          />
+        </div>
 
-      <Box sx={{ my: 2 }}>
-        <TextField
-          label="Bill Name / Title"
-          name="billName"
-          value={billInfo.billName}
-          onChange={handleChange}
-          placeholder="e.g., Dinner at Joe's"
-          fullWidth
-          margin="dense"
-          variant="outlined"
-        />
-      </Box>
-
-      <Grid container spacing={3}>
-        <Grid item xs={12} sm={4}>
-          <TextField
-            label="Total Amount"
+        {/* Total Amount */}
+        <div className="inputRow">
+          <label>Total Amount</label>
+          <input
             type="number"
-            name="totalAmount"
-            value={billInfo.totalAmount}
-            onChange={handleChange}
-            fullWidth
-            margin="dense"
-            variant="outlined"
-            InputProps={{
-              startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>,
-            }}
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
           />
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          <Typography variant="subtitle2" sx={{ mb: 1 }}>
-            Bill Date
-          </Typography>
-          <DatePicker
-            selected={billInfo.billDate}
-            onChange={handleDateChange}
-            className="form-control"
-            wrapperClassName="datePicker"
-          />
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          <TextField
-            label="Location / Restaurant"
-            name="location"
-            value={billInfo.location}
-            onChange={handleChange}
-            placeholder="e.g., Joe's Diner"
-            fullWidth
-            margin="dense"
-            variant="outlined"
-          />
-        </Grid>
-      </Grid>
+        </div>
 
-      <Box sx={{ mt: 3 }}>
-        <TextField
-          label="Notes / Comments"
-          name="notes"
-          value={billInfo.notes}
-          onChange={handleChange}
-          placeholder="Any extra transaction details..."
-          multiline
-          rows={2}
-          fullWidth
-          margin="dense"
-          variant="outlined"
-        />
-      </Box>
+        {/* Bill Date */}
+        <div className="inputRow">
+          <label>Bill Date</label>
+          <input
+            type="date"
+            value={billDate}
+            onChange={(e) => setBillDate(e.target.value)}
+          />
+        </div>
 
-      <Box sx={{ mt: 3 }}>
-        <Typography variant="subtitle2" sx={{ mb: 1 }}>
-          Upload Receipt (OCR)
-        </Typography>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => {
-            if (e.target.files && e.target.files[0]) {
-              onUploadReceipt(e.target.files[0]);
-            }
-          }}
-          style={{ width: '100%' }}
-        />
-      </Box>
-    </Box>
+        {/* Location */}
+        <div className="inputRow">
+          <label>Location / Restaurant</label>
+          <input
+            type="text"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+          />
+        </div>
+
+        {/* Paid By (existing logic) */}
+        <div className="inputRow">
+          <label>Paid By</label>
+          <select
+            value={paidBy}
+            onChange={(e) => setPaidBy(e.target.value)}
+          >
+            <option value="">Select One</option>
+            {participants.map((p) => (
+              <option key={p.id} value={p.name}>{p.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Add Participants (simple checkboxes) */}
+        <div className="inputRow">
+          <label>Add Participants</label>
+          <div>
+            {allNames.map((name) => (
+              <label key={name} style={{ display: 'block' }}>
+                <input
+                  type="checkbox"
+                  checked={localSelected.includes(name)}
+                  onChange={() => handleToggleName(name)}
+                />
+                {name}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Notes */}
+        <div className="inputRow">
+          <label>Notes / Comments</label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </div>
+
+        {/* Upload Receipt */}
+        <div className="inputRow">
+          <label>Upload Receipt (OCR)</label>
+          <input
+            type="file"
+            onChange={(e) => setReceiptFile(e.target.files[0])}
+          />
+        </div>
+      </div>
+    </section>
   );
 }
+
+export default BillDetails;

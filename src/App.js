@@ -1,174 +1,135 @@
-import React, { useState, useEffect } from "react";
-import "./styles.css";
+// src/App.js
+import React, { useState } from 'react';
+import './App.css';
+import Sidebar from './components/Sidebar';
+import Header from './components/Header';
+import BillDetails from './components/BillDetails';
+import ItemsSection from './components/ItemsSection';
+import ParticipantsSection from './components/ParticipantsSection';
+import SettlementSection from './components/SettlementSection';
 
-// Subcomponents
-import BillDetails from "./components/BillDetails";
-import ItemsSection from "./components/ItemsSection";
-import ParticipantsSection from "./components/ParticipantsSection";
-import SettlementSection from "./components/SettlementSection";
+function App() {
+  // Bill Details states
+  const [billName, setBillName] = useState('');
+  const [amount, setAmount] = useState('');
+  const [billDate, setBillDate] = useState('');
+  const [location, setLocation] = useState('');
+  const [paidBy, setPaidBy] = useState('');
+  const [notes, setNotes] = useState('');
+  const [receiptFile, setReceiptFile] = useState(null);
 
-// MUI imports
-import { Container, Typography, Paper, Box } from "@mui/material";
+  // -------------------------------------------
+  // 1) Global array of “selected participants”
+  // -------------------------------------------
+  const [billParticipants, setBillParticipants] = useState([]); 
+  // e.g. ["Participant 1", "Participant 2"] or [] if none are selected
 
-// Helper function for minimal settlement
-import { calculateSettlement } from "./utils/settlementUtils";
-
-export default function App() {
-  // ---------------------------
-  // State
-  // ---------------------------
-  const [billInfo, setBillInfo] = useState({
-    billName: "",
-    totalAmount: 0,
-    billDate: new Date(),
-    location: "",
-    notes: "",
-  });
-
+  // Items
   const [items, setItems] = useState([
-    {
-      id: Date.now(),
-      name: "",
-      quantity: 1,
-      price: 0,
-      taxRate: 0,
-      splitType: "equal",
-      splits: {},
-      includedParticipants: [],
-    },
+    { id: 1, name: 'bread', qty: 1, price: 10, tax: 8.1 },
+    { id: 2, name: 'milk',  qty: 1, price: 6,  tax: 1.8 },
   ]);
 
-  const [participants, setParticipants] = useState([]);
-  const [settlement, setSettlement] = useState([]);
+  // Participants Section
+  const [participants, setParticipants] = useState([
+    { id: 1, name: 'Participant 1', amountPaid: 1, amountOwed: 10.85 },
+    { id: 2, name: 'Participant 2', amountPaid: 0, amountOwed: 8.96 },
+    { id: 3, name: 'Participant 3', amountPaid: 0, amountOwed: 6.85 },
+  ]);
 
-  // ---------------------------
-  // Effects
-  // ---------------------------
-  useEffect(() => {
-    recalculateBill();
-    // eslint-disable-next-line
-  }, [items, participants]);
-
-  // ---------------------------
-  // Calculation
-  // ---------------------------
-  const calculateItemTotal = (item) => {
-    const subtotal = item.price * item.quantity;
-    const taxAmount = (subtotal * item.taxRate) / 100;
-    return subtotal + taxAmount;
+  // Handlers
+  const handleAddItem = () => {
+    setItems([...items, {
+      id: Date.now(),
+      name: '',
+      qty: 1,
+      price: 0,
+      tax: 0
+    }]);
   };
 
-  const recalculateBill = () => {
-    let total = 0;
-    items.forEach((item) => {
-      total += calculateItemTotal(item);
-    });
-
-    // Reset each participant’s amountOwed
-    const updatedParticipants = participants.map((p) => ({ ...p, amountOwed: 0 }));
-
-    // Distribute costs per item
-    items.forEach((item) => {
-      const itemTotal = calculateItemTotal(item);
-
-      if (item.splitType === "equal") {
-        // Use includedParticipants if set, else all
-        const relevantIds = item.includedParticipants?.length
-          ? item.includedParticipants
-          : updatedParticipants.map((p) => p.id);
-        const share = itemTotal / (relevantIds.length || 1);
-        updatedParticipants.forEach((p) => {
-          if (relevantIds.includes(p.id)) {
-            p.amountOwed += share;
-          }
-        });
-      } else if (item.splitType === "unequal-money") {
-        // direct amounts in item.splits
-        Object.entries(item.splits).forEach(([pid, amt]) => {
-          const idx = updatedParticipants.findIndex((p) => p.id === Number(pid));
-          if (idx !== -1) {
-            updatedParticipants[idx].amountOwed += parseFloat(amt) || 0;
-          }
-        });
-      } else if (item.splitType === "unequal-percent") {
-        // percentages in item.splits
-        let sumOfPercent = 0;
-        Object.values(item.splits).forEach((percent) => {
-          sumOfPercent += parseFloat(percent) || 0;
-        });
-        Object.entries(item.splits).forEach(([pid, percent]) => {
-          const fraction = sumOfPercent ? (parseFloat(percent) || 0) / sumOfPercent : 0;
-          const amount = itemTotal * fraction;
-          const idx = updatedParticipants.findIndex((p) => p.id === Number(pid));
-          if (idx !== -1) {
-            updatedParticipants[idx].amountOwed += amount;
-          }
-        });
-      } else if (item.splitType === "unequal-shares") {
-        // shares in item.splits
-        let totalShares = 0;
-        Object.values(item.splits).forEach((sh) => {
-          totalShares += parseFloat(sh) || 0;
-        });
-        Object.entries(item.splits).forEach(([pid, shares]) => {
-          const fraction = totalShares ? (parseFloat(shares) || 0) / totalShares : 0;
-          const amount = itemTotal * fraction;
-          const idx = updatedParticipants.findIndex((p) => p.id === Number(pid));
-          if (idx !== -1) {
-            updatedParticipants[idx].amountOwed += amount;
-          }
-        });
-      }
-    });
-
-    // Minimal settlement
-    const minimalTxns = calculateSettlement(updatedParticipants);
-
-    setBillInfo((prev) => ({ ...prev, totalAmount: total }));
-    setParticipants(updatedParticipants);
-    setSettlement(minimalTxns);
+  const handleRemoveItem = (id) => {
+    setItems(items.filter((item) => item.id !== id));
   };
 
-  // ---------------------------
-  // Render
-  // ---------------------------
+  const handleAddParticipant = () => {
+    setParticipants([...participants, {
+      id: Date.now(),
+      name: '',
+      amountPaid: 0,
+      amountOwed: 0
+    }]);
+  };
+
+  const handleRemoveParticipant = (id) => {
+    setParticipants(participants.filter((p) => p.id !== id));
+  };
+
+  const handleRecalculate = () => {
+    console.log('Recalculating amounts...');
+  };
+
+  // ---------------------------------------------------
+  // 2) Callback BillDetails will use to update selection
+  // ---------------------------------------------------
+  const handleBillParticipantsChange = (selectedNames) => {
+    // Example: selectedNames = ["Participant 1", "Participant 2"]
+    setBillParticipants(selectedNames);
+  };
+
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Typography variant="h4" gutterBottom sx={{ mb: 4 }}>
-        Bill Splitting Application
-      </Typography>
+    <div className="appContainer">
+      <Sidebar />
 
-      <Box component={Paper} variant="outlined" sx={{ p: 3, mb: 3 }}>
+      <div className="mainContent">
+        <Header title="IT'S WISER THAN SPLITWISE" />
+
+        {/* Bill Details */}
         <BillDetails
-          billInfo={billInfo}
-          setBillInfo={setBillInfo}
-          onUploadReceipt={(file) => console.log("Uploaded:", file)}
+          billName={billName}
+          setBillName={setBillName}
+          amount={amount}
+          setAmount={setAmount}
+          billDate={billDate}
+          setBillDate={setBillDate}
+          location={location}
+          setLocation={setLocation}
+          paidBy={paidBy}
+          setPaidBy={setPaidBy}
+          notes={notes}
+          setNotes={setNotes}
+          receiptFile={receiptFile}
+          setReceiptFile={setReceiptFile}
+          participants={participants} 
+          
+          // Pass the global "selected participants" and the callback:
+          billParticipants={billParticipants}
+          onBillParticipantsChange={handleBillParticipantsChange}
         />
-      </Box>
 
-      <Box component={Paper} variant="outlined" sx={{ p: 3, mb: 3 }}>
+        {/* Items Section */}
         <ItemsSection
           items={items}
           setItems={setItems}
-          participants={participants}
+          handleAddItem={handleAddItem}
+          handleRemoveItem={handleRemoveItem}
+          // Provide the global selected participants
+          billParticipants={billParticipants}
         />
-      </Box>
 
-      <Box component={Paper} variant="outlined" sx={{ p: 3, mb: 3 }}>
+        {/* Participants Section */}
         <ParticipantsSection
           participants={participants}
           setParticipants={setParticipants}
+          handleAddParticipant={handleAddParticipant}
+          handleRemoveParticipant={handleRemoveParticipant}
+          handleRecalculate={handleRecalculate}
         />
-      </Box>
 
-      <Box component={Paper} variant="outlined" sx={{ p: 3, mb: 3 }}>
-        <SettlementSection
-          items={items}
-          billInfo={billInfo}
-          participants={participants}
-          settlement={settlement}
-        />
-      </Box>
-    </Container>
+        <SettlementSection />
+      </div>
+    </div>
   );
 }
+
+export default App;
