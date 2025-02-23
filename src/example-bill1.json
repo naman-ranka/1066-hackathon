@@ -1,0 +1,65 @@
+{
+  "billInfo": {
+    "billName": "Team Dinner at Italian Restaurant",
+    "totalAmount": 285.50,
+    "billDate": "2023-10-25",
+    "location": "Bella Italia Restaurant",
+    "notes": "Team celebration dinner"
+  },
+  "items": [
+    {
+      "name": "Margherita Pizza",
+      "quantity": 2,
+      "price": 18.50,
+      "taxRate": 10,
+      "splitType": "equal",
+      "splits": {},
+      "includedParticipants": []
+    },
+    {
+      "name": "Spaghetti Carbonara",
+      "quantity": 3,
+      "price": 22.00,
+      "taxRate": 10,
+      "splitType": "unequal-money",
+      "splits": {
+        "1697924151234": 22.00,
+        "1697924162345": 44.00
+      },
+      "includedParticipants": ["1697924151234", "1697924162345"]
+    },
+    {
+      "name": "Wine Bottle",
+      "quantity": 2,
+      "price": 45.00,
+      "taxRate": 15,
+      "splitType": "unequal-percent",
+      "splits": {
+        "1697924151234": 30,
+        "1697924162345": 40,
+        "1697924173456": 30
+      },
+      "includedParticipants": ["1697924151234", "1697924162345", "1697924173456"]
+    }
+  ],
+  "participants": [
+    {
+      "name": "Alice",
+      "amountPaid": 150.00,
+      "amountOwed": 95.50,
+      "id": 1697924151234
+    },
+    {
+      "name": "Bob",
+      "amountPaid": 100.00,
+      "amountOwed": 110.00,
+      "id": 1697924162345
+    },
+    {
+      "name": "Charlie",
+      "amountPaid": 35.50,
+      "amountOwed": 80.00,
+      "id": 1697924173456
+    }
+  ]
+}

@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from "react";
 import "./styles.css";
+import { saveBill } from "./api/billService";
+import { loadBillFromJson } from "./utils/billLoader";
+import { processReceiptImage } from "./utils/imageProcessor";
 
 // Subcomponents
 import BillDetails from "./components/BillDetails";
@@ -8,7 +11,7 @@ import ParticipantsSection from "./components/ParticipantsSection";
 import SettlementSection from "./components/SettlementSection";
 
 // MUI imports
-import { Container, Typography, Paper, Box } from "@mui/material";
+import { Container, Typography, Paper, Box, Button } from "@mui/material";
 
 // Helper function for minimal settlement
 import { calculateSettlement } from "./utils/settlementUtils";
@@ -129,20 +132,104 @@ export default function App() {
     setSettlement(minimalTxns);
   };
 
+  const handleSave = async () => {
+    try {
+      const result = await saveBill(billInfo, items, participants);
+      alert("Bill saved successfully!");
+      console.log("Saved bill:", result);
+    } catch (error) {
+      console.error("Error saving bill:", error);
+      alert("Error saving bill: " + (error.message || "Unknown error"));
+    }
+  };
+
+  const handleJsonUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const jsonData = JSON.parse(e.target.result);
+          const parsedData = loadBillFromJson(jsonData);
+          
+          if (parsedData.isValid) {
+            setBillInfo(parsedData.billInfo);
+            setItems(parsedData.items);
+            setParticipants(parsedData.participants);
+          } else {
+            alert("Error loading JSON: " + parsedData.error);
+          }
+        } catch (error) {
+          alert("Invalid JSON file: " + error.message);
+        }
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const handleReceiptUpload = async (file) => {
+    try {
+      // Process the image and get JSON response
+      const jsonData = await processReceiptImage(file);
+      
+      // Use existing billLoader to parse the data
+      const parsedData = loadBillFromJson(jsonData);
+      
+      if (parsedData.isValid) {
+        setBillInfo(parsedData.billInfo);
+        setItems(parsedData.items);
+        setParticipants(parsedData.participants);
+      } else {
+        alert("Error processing receipt: " + parsedData.error);
+      }
+    } catch (error) {
+      console.error("Error processing receipt:", error);
+      alert("Error processing receipt: " + (error.message || "Unknown error"));
+    }
+  };
+
   // ---------------------------
   // Render
   // ---------------------------
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Typography variant="h4" gutterBottom sx={{ mb: 4 }}>
-        Bill Splitting Application
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+        <Typography variant="h4" gutterBottom sx={{ mb: 0 }}>
+          Bill Splitting Application
+        </Typography>
+        <Box>
+          <input
+            accept=".json"
+            style={{ display: 'none' }}
+            id="json-file-input"
+            type="file"
+            onChange={handleJsonUpload}
+          />
+          <label htmlFor="json-file-input">
+            <Button 
+              variant="outlined" 
+              component="span"
+              sx={{ mr: 2 }}
+            >
+              Load from JSON
+            </Button>
+          </label>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            onClick={handleSave}
+            sx={{ minWidth: 100 }}
+          >
+            Save Bill
+          </Button>
+        </Box>
+      </Box>
 
       <Box component={Paper} variant="outlined" sx={{ p: 3, mb: 3 }}>
         <BillDetails
           billInfo={billInfo}
           setBillInfo={setBillInfo}
-          onUploadReceipt={(file) => console.log("Uploaded:", file)}
+          onUploadReceipt={handleReceiptUpload}
         />
       </Box>
 

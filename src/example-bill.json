@@ -1,0 +1,107 @@
+
+{
+  "storeInformation": {
+    "storeName": "DESI PLAZA",
+    "storeAddress": "1037 E Lemon St\nTempe, AZ 852813903",
+    "storeContact": "480-968-1573",
+    "dateTimeOfPurchase": "2023-10-25"
+  },
+  "items": [
+    {
+      "itemName": "Toor Dal",
+      "quantity": 1,
+      "pricePerUnit": 3.99,
+      "totalPrice": 3.99,
+      "itemType": "Packaged",
+      "taxRate": 0.0,
+      "extraCharges": 0.18,
+      "taxAmount": 0.0,
+      "itemTotalAfterChargesAndTax": 4.17
+    },
+    {
+      "itemName": "Moong Whole",
+      "quantity": 1,
+      "pricePerUnit": 4.50,
+      "totalPrice": 4.50,
+      "itemType": "Packaged",
+      "taxRate": 0.0,
+      "extraCharges": 0.18,
+      "taxAmount": 0.0,
+      "itemTotalAfterChargesAndTax": 4.68
+    },
+    {
+      "itemName": "Moong Dal (2lbs)",
+      "quantity": 1,
+      "pricePerUnit": 4.99,
+      "totalPrice": 4.99,
+      "itemType": "Packaged",
+      "taxRate": 0.0,
+      "extraCharges": 0.18,
+      "taxAmount": 0.0,
+      "itemTotalAfterChargesAndTax": 5.17
+    },
+    {
+      "itemName": "Chana Dal",
+      "quantity": 1,
+      "pricePerUnit": 3.99,
+      "totalPrice": 3.99,
+      "itemType": "Packaged",
+      "taxRate": 0.0,
+      "extraCharges": 0.18,
+      "taxAmount": 0.0,
+      "itemTotalAfterChargesAndTax": 4.17
+    },
+    {
+      "itemName": "Raw Peanut",
+      "quantity": 1,
+      "pricePerUnit": 2.99,
+      "totalPrice": 2.99,
+      "itemType": "Packaged",
+      "taxRate": 0.0,
+      "extraCharges": 0.18,
+      "taxAmount": 0.0,
+      "itemTotalAfterChargesAndTax": 3.17
+    },
+    {
+      "itemName": "Gopi Paneer (400g)",
+      "quantity": 1,
+      "pricePerUnit": 6.99,
+      "totalPrice": 6.99,
+      "itemType": "Packaged",
+      "taxRate": 0.0,
+      "extraCharges": 0.18,
+      "taxAmount": 0.0,
+      "itemTotalAfterChargesAndTax": 7.17
+    },
+    {
+      "itemName": "Deep Dahi (5 lbs)",
+      "quantity": 1,
+      "pricePerUnit": 5.99,
+      "totalPrice": 5.99,
+      "itemType": "Packaged",
+      "taxRate": 0.0,
+      "extraCharges": 0.18,
+      "taxAmount": 0.0,
+      "itemTotalAfterChargesAndTax": 6.17
+    },
+    {
+      "itemName": "Melody Toilet Rolls (4rolls)",
+      "quantity": 1,
+      "pricePerUnit": 2.99,
+      "totalPrice": 2.99,
+      "itemType": "Packaged",
+      "taxRate": 0.0,
+      "extraCharges": 0.18,
+      "taxAmount": 0.0,
+      "itemTotalAfterChargesAndTax": 3.17
+    }
+  ],
+  "subtotalBeforeChargesAndTaxes": 36.43,
+  "totalExtraChargesDistributed": 1.44,
+  "taxOnProduce": 0.46,
+  "taxOnPackaged": 0.89,
+  "grandTotal": 39.23,
+  "paymentDetails": {
+    "paymentMethod": "DEBIT CARD SALE VISA 5080"
+  }
+}
