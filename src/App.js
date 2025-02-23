@@ -56,9 +56,9 @@ export default function App() {
   // Calculation
   // ---------------------------
   const calculateItemTotal = (item) => {
-    const subtotal = item.price * item.quantity;
-    const taxAmount = (subtotal * item.taxRate) / 100;
-    return subtotal + taxAmount;
+    const subtotal = Number((item.price * item.quantity).toFixed(2));
+    const taxAmount = Number(((subtotal * item.taxRate) / 100).toFixed(2));
+    return Number((subtotal + taxAmount).toFixed(2));
   };
 
   const recalculateBill = () => {
@@ -127,7 +127,7 @@ export default function App() {
     // Minimal settlement
     const minimalTxns = calculateSettlement(updatedParticipants);
 
-    setBillInfo((prev) => ({ ...prev, totalAmount: total }));
+    setBillInfo((prev) => ({ ...prev, totalAmount: Number(total.toFixed(2)) }));
     setParticipants(updatedParticipants);
     setSettlement(minimalTxns);
   };

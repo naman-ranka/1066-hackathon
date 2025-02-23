@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Typography, TextField, Grid } from "@mui/material";
+import { Box, Typography, TextField, Button, Grid } from "@mui/material";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -20,84 +20,68 @@ export default function BillDetails({ billInfo, setBillInfo, onUploadReceipt }) 
   };
 
   return (
-    <Box>
-      <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
+    <Box sx={{ mb: 3 }}>
+      <Typography variant="h6" gutterBottom>
         1. Bill Details
       </Typography>
+      <TextField
+        label="Bill Name / Title"
+        name="billName"
+        value={billInfo.billName}
+        onChange={handleChange}
+        placeholder="e.g., Dinner at Joe’s"
+        fullWidth
+        margin="dense"
+      />
 
-      <Box sx={{ my: 2 }}>
-        <TextField
-          label="Bill Name / Title"
-          name="billName"
-          value={billInfo.billName}
-          onChange={handleChange}
-          placeholder="e.g., Dinner at Joe's"
-          fullWidth
-          margin="dense"
-          variant="outlined"
-        />
-      </Box>
+      <TextField
+        label="Total Amount (auto or override)"
+        type="number"
+        name="totalAmount"
+        value={billInfo.totalAmount}
+        onChange={handleChange}
+        fullWidth
+        margin="dense"
+      />
 
-      <Grid container spacing={3}>
-        <Grid item xs={12} sm={4}>
-          <TextField
-            label="Total Amount"
-            type="number"
-            name="totalAmount"
-            value={billInfo.totalAmount}
-            onChange={handleChange}
-            fullWidth
-            margin="dense"
-            variant="outlined"
-            InputProps={{
-              startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>,
-            }}
-          />
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+      <Grid container spacing={2}>
+        <Grid item xs={12} sm={6}>
+          <Typography variant="subtitle2" sx={{ mt: 1 }}>
             Bill Date
           </Typography>
           <DatePicker
             selected={billInfo.billDate}
             onChange={handleDateChange}
-            className="form-control"
-            wrapperClassName="datePicker"
+            className="MuiDatePicker"
           />
         </Grid>
-        <Grid item xs={12} sm={4}>
+        <Grid item xs={12} sm={6}>
           <TextField
             label="Location / Restaurant"
             name="location"
             value={billInfo.location}
             onChange={handleChange}
-            placeholder="e.g., Joe's Diner"
+            placeholder="e.g., Joe’s Diner"
             fullWidth
             margin="dense"
-            variant="outlined"
           />
         </Grid>
       </Grid>
 
-      <Box sx={{ mt: 3 }}>
-        <TextField
-          label="Notes / Comments"
-          name="notes"
-          value={billInfo.notes}
-          onChange={handleChange}
-          placeholder="Any extra transaction details..."
-          multiline
-          rows={2}
-          fullWidth
-          margin="dense"
-          variant="outlined"
-        />
-      </Box>
+      <TextField
+        label="Notes / Comments"
+        name="notes"
+        value={billInfo.notes}
+        onChange={handleChange}
+        placeholder="Any extra transaction details..."
+        multiline
+        rows={2}
+        fullWidth
+        margin="dense"
+      />
 
-      <Box sx={{ mt: 3 }}>
-        <Typography variant="subtitle2" sx={{ mb: 1 }}>
-          Upload Receipt (OCR)
-        </Typography>
+      <Box sx={{ mt: 2 }}>
+        <Typography variant="subtitle2">Upload Receipt (OCR)</Typography>
         <input
           type="file"
           accept="image/*"
@@ -106,7 +90,6 @@ export default function BillDetails({ billInfo, setBillInfo, onUploadReceipt }) 
               onUploadReceipt(e.target.files[0]);
             }
           }}
-          style={{ width: '100%' }}
         />
       </Box>
     </Box>
