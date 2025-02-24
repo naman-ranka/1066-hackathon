@@ -3,6 +3,9 @@ import "./styles.css";
 import { saveBill } from "./api/billService";
 import { loadBillFromJson } from "./utils/billLoader";
 import { processReceiptImage } from "./utils/imageProcessor";
+import axios from "axios";
+
+import Header from "./components/Header/headers";
 
 // Subcomponents
 import BillDetails from "./components/BillDetails";
@@ -26,7 +29,11 @@ export default function App() {
     billDate: new Date(),
     location: "",
     notes: "",
+    payers: [], // array of {participantId, name, amount}
+
   });
+
+  const [allParticipants, setAllParticipants] = useState([]);
 
   const [items, setItems] = useState([
     {
@@ -41,7 +48,7 @@ export default function App() {
     },
   ]);
 
-  const [participants, setParticipants] = useState([]);
+  const [billParticipants, setBillParticipants] = useState([]);
   const [settlement, setSettlement] = useState([]);
 
   // ---------------------------
@@ -50,7 +57,21 @@ export default function App() {
   useEffect(() => {
     recalculateBill();
     // eslint-disable-next-line
-  }, [items, participants]);
+  }, [items, billParticipants]);
+
+  useEffect(() => {
+    async function fetchAllParticipants() {
+      try {
+        const response = await axios.get("http://localhost:8000/api/global-participants/");
+        setAllParticipants(response.data);
+      } catch (error) {
+        console.error("Error fetching billParticipants from backend:", error);
+      }
+    }
+  
+    fetchAllParticipants();
+  }, []);
+
 
   // ---------------------------
   // Calculation
@@ -68,7 +89,7 @@ export default function App() {
     });
 
     // Reset each participant’s amountOwed
-    const updatedParticipants = participants.map((p) => ({ ...p, amountOwed: 0 }));
+    const updatedParticipants = billParticipants.map((p) => ({ ...p, amountOwed: 0 }));
 
     // Distribute costs per item
     items.forEach((item) => {
@@ -128,13 +149,13 @@ export default function App() {
     const minimalTxns = calculateSettlement(updatedParticipants);
 
     setBillInfo((prev) => ({ ...prev, totalAmount: Number(total.toFixed(2)) }));
-    setParticipants(updatedParticipants);
+    setBillParticipants(updatedParticipants);
     setSettlement(minimalTxns);
   };
 
   const handleSave = async () => {
     try {
-      const result = await saveBill(billInfo, items, participants);
+      const result = await saveBill(billInfo, items, billParticipants);
       alert("Bill saved successfully!");
       console.log("Saved bill:", result);
     } catch (error) {
@@ -155,7 +176,7 @@ export default function App() {
           if (parsedData.isValid) {
             setBillInfo(parsedData.billInfo);
             setItems(parsedData.items);
-            setParticipants(parsedData.participants);
+            setBillParticipants(parsedData.billParticipants);
           } else {
             alert("Error loading JSON: " + parsedData.error);
           }
@@ -178,7 +199,7 @@ export default function App() {
       if (parsedData.isValid) {
         setBillInfo(parsedData.billInfo);
         setItems(parsedData.items);
-        setParticipants(parsedData.participants);
+        setBillParticipants(parsedData.billParticipants);
       } else {
         alert("Error processing receipt: " + parsedData.error);
       }
@@ -193,6 +214,10 @@ export default function App() {
   // ---------------------------
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Header />
+      <br />
+      <br />
+      <br />
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Typography variant="h4" gutterBottom sx={{ mb: 0 }}>
           Bill Splitting Application
@@ -226,10 +251,20 @@ export default function App() {
       </Box>
 
       <Box component={Paper} variant="outlined" sx={{ p: 3, mb: 3 }}>
+        <ParticipantsSection
+          allParticipants={allParticipants}
+          billParticipants={billParticipants}
+          setBillParticipants={setBillParticipants}
+          billInfo={billInfo}
+        />
+      </Box>
+
+      <Box component={Paper} variant="outlined" sx={{ p: 3, mb: 3 }}>
         <BillDetails
           billInfo={billInfo}
           setBillInfo={setBillInfo}
           onUploadReceipt={handleReceiptUpload}
+          billParticipants={billParticipants} // <--- add this
         />
       </Box>
 
@@ -237,22 +272,22 @@ export default function App() {
         <ItemsSection
           items={items}
           setItems={setItems}
-          participants={participants}
+          billParticipants={billParticipants}
         />
       </Box>
 
-      <Box component={Paper} variant="outlined" sx={{ p: 3, mb: 3 }}>
+      {/* <Box component={Paper} variant="outlined" sx={{ p: 3, mb: 3 }}>
         <ParticipantsSection
-          participants={participants}
-          setParticipants={setParticipants}
+          billParticipants={billParticipants}
+          setBillParticipants={setBillParticipants}
         />
-      </Box>
+      </Box> */}
 
       <Box component={Paper} variant="outlined" sx={{ p: 3, mb: 3 }}>
         <SettlementSection
           items={items}
           billInfo={billInfo}
-          participants={participants}
+          billParticipants={billParticipants}
           settlement={settlement}
         />
       </Box>

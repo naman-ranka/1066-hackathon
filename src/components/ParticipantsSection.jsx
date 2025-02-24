@@ -1,3 +1,4 @@
+// ParticipantsSection.jsx
 import React from "react";
 import {
   Box,
@@ -8,92 +9,70 @@ import {
   TableHead,
   TableRow,
   TableCell,
-  TextField,
 } from "@mui/material";
 
-export default function ParticipantsSection({ participants, setParticipants }) {
-  const handleAddParticipant = () => {
-    setParticipants((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        name: `Participant ${prev.length + 1}`,
-        amountPaid: 0,
-        amountOwed: 0,
-      },
-    ]);
+export default function ParticipantsSection({
+  allParticipants,
+  billParticipants,
+  setBillParticipants,
+  billInfo, // Add billInfo prop to access payers
+}) {
+  // Add participant to the "billParticipants" array
+  const handleAddToBill = (participant) => {
+    // if participant is not already in the bill
+    if (!billParticipants.some((p) => p.id === participant.id)) {
+      setBillParticipants((prev) => [
+        ...prev,
+        {
+          // name, etc. from backend
+          ...participant,
+          amountOwed: 0, // Only initialize amountOwed, amountPaid comes from billInfo.payers
+        },
+      ]);
+    }
   };
 
-  const handleRemoveParticipant = (id) => {
-    setParticipants((prev) => prev.filter((p) => p.id !== id));
+  const handleRemoveFromBill = (id) => {
+    setBillParticipants((prev) => prev.filter((p) => p.id !== id));
   };
 
-  const handleParticipantChange = (id, field, value) => {
-    setParticipants((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, [field]: value } : p))
-    );
+  // Helper function to get amount paid by a participant
+  const getAmountPaid = (participantId) => {
+    if (!billInfo?.payers) return 0;
+    const payer = billInfo.payers.find(p => p.participantId === participantId);
+    return payer ? payer.amount : 0;
   };
 
   return (
     <Box>
-      <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
-        3. Participants
+      <Typography variant="h6" gutterBottom>
+        Participants (Fetched from Backend)
       </Typography>
 
-      <Button 
-        variant="contained" 
-        onClick={handleAddParticipant} 
-        sx={{ mb: 3 }}
-      >
-        Add Participant
-      </Button>
-
-      <Table sx={{ minWidth: 650 }}>
+      {/* 1) Show all participants from the backend */}
+      <Typography variant="body2" color="text.secondary">
+        Select from available participants:
+      </Typography>
+      <Table sx={{ mt: 1, mb: 3 }}>
         <TableHead>
           <TableRow>
             <TableCell>Name</TableCell>
-            <TableCell align="center">Amount Paid</TableCell>
-            <TableCell align="center">Amount Owed (auto)</TableCell>
-            <TableCell align="center">Actions</TableCell>
+            <TableCell>Email (if you have that)</TableCell>
+            <TableCell>Action</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {participants.map((p) => (
-            <TableRow key={p.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+          {allParticipants.map((participant) => (
+            <TableRow key={participant.id}>
+              <TableCell>{participant.name}</TableCell>
+              <TableCell>{participant.email}</TableCell>
               <TableCell>
-                <TextField
-                  size="small"
-                  value={p.name}
-                  onChange={(e) => handleParticipantChange(p.id, "name", e.target.value)}
-                  placeholder="Enter name"
-                  fullWidth
-                />
-              </TableCell>
-              <TableCell align="center">
-                <TextField
-                  type="number"
-                  size="small"
-                  value={p.amountPaid}
-                  onChange={(e) => handleParticipantChange(p.id, "amountPaid", parseFloat(e.target.value))}
-                  InputProps={{
-                    startAdornment: <Typography sx={{ mr: 0.5 }}>$</Typography>,
-                  }}
-                  sx={{ width: '120px' }}
-                />
-              </TableCell>
-              <TableCell align="center">
-                <Typography color="text.secondary">
-                  ${p.amountOwed.toFixed(2)}
-                </Typography>
-              </TableCell>
-              <TableCell align="center">
                 <Button
                   variant="outlined"
-                  color="error"
-                  onClick={() => handleRemoveParticipant(p.id)}
                   size="small"
+                  onClick={() => handleAddToBill(participant)}
                 >
-                  Remove
+                  Add to Bill
                 </Button>
               </TableCell>
             </TableRow>
@@ -101,12 +80,54 @@ export default function ParticipantsSection({ participants, setParticipants }) {
         </TableBody>
       </Table>
 
-      {participants.length === 0 && (
-        <Box sx={{ textAlign: 'center', mt: 2 }}>
-          <Typography color="text.secondary">
-            No participants added yet. Add participants to start splitting the bill.
-          </Typography>
-        </Box>
+      {/* 2) Show the participants currently in this bill */}
+      <Typography variant="h6" gutterBottom>
+        Bill Participants
+      </Typography>
+      {billParticipants.length === 0 ? (
+        <Typography color="text.secondary">No participants added yet.</Typography>
+      ) : (
+        <Table sx={{ mt: 1 }}>
+          <TableHead>
+            <TableRow>
+              <TableCell>Name</TableCell>
+              <TableCell>Amount Paid</TableCell>
+              <TableCell>Amount Owed</TableCell>
+              <TableCell>Net Balance</TableCell>
+              <TableCell>Remove</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {billParticipants.map((p) => {
+              const amountPaid = getAmountPaid(p.id);
+              const netBalance = amountPaid - p.amountOwed;
+              return (
+                <TableRow key={p.id}>
+                  <TableCell>{p.name}</TableCell>
+                  <TableCell>${amountPaid.toFixed(2)}</TableCell>
+                  <TableCell>${p.amountOwed.toFixed(2)}</TableCell>
+                  <TableCell>
+                    <Typography
+                      color={netBalance > 0 ? "success.main" : netBalance < 0 ? "error.main" : "text.primary"}
+                    >
+                      ${netBalance.toFixed(2)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="small"
+                      onClick={() => handleRemoveFromBill(p.id)}
+                    >
+                      Remove
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
       )}
     </Box>
   );

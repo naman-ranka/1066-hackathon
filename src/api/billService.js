@@ -5,10 +5,10 @@ import axios from "axios";
  * Save a bill to the backend (Django)
  * @param {Object} billInfo - { billName, totalAmount, billDate, location, notes }
  * @param {Array} items - array of item objects
- * @param {Array} participants - array of participant objects
+ * @param {Array} billParticipants - array of participant objects
  * @returns {Promise<Object>} - the created or updated Bill from Django
  */
-export async function saveBill(billInfo, items, participants) {
+export async function saveBill(billInfo, items, billParticipants) {
   // 1. Prepare the JSON payload
   const payload = {
     name: billInfo.billName,
@@ -16,7 +16,7 @@ export async function saveBill(billInfo, items, participants) {
     location: billInfo.location || "",
     notes: billInfo.notes || "",
     total_amount: parseFloat(billInfo.totalAmount),
-    participants: participants.map((p) => ({
+    billParticipants: billParticipants.map((p) => ({
       name: p.name,
       amount_paid: parseFloat(p.amountPaid || 0),
       amount_owed: parseFloat(p.amountOwed || 0),

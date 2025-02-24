@@ -6,7 +6,7 @@
 export const loadBillFromJson = (jsonData) => {
   try {
     // Validate required fields
-    const requiredFields = ['billInfo', 'items', 'participants'];
+    const requiredFields = ['billInfo', 'items', 'billParticipants'];
     requiredFields.forEach(field => {
       if (!jsonData[field]) {
         throw new Error(`Missing required field: ${field}`);
@@ -34,8 +34,8 @@ export const loadBillFromJson = (jsonData) => {
       includedParticipants: item.includedParticipants || []
     }));
 
-    // Parse participants
-    const participants = jsonData.participants.map(p => ({
+    // Parse billParticipants
+    const billParticipants = jsonData.billParticipants.map(p => ({
       id: Date.now() + Math.random(),
       name: p.name || '',
       amountPaid: parseFloat(p.amountPaid) || 0,
@@ -45,7 +45,7 @@ export const loadBillFromJson = (jsonData) => {
     return {
       billInfo,
       items,
-      participants,
+      billParticipants,
       isValid: true
     };
   } catch (error) {
@@ -77,7 +77,7 @@ export const sampleBillJson = {
       includedParticipants: []
     }
   ],
-  participants: [
+  billParticipants: [
     {
       name: "John",
       amountPaid: 100,

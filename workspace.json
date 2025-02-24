@@ -1,0 +1,71 @@
+{
+  "name": "bill-split",
+  "version": "0.1.0",
+  "description": "Bill splitting application with React and Material-UI",
+  "layout": {
+    "components": {
+      "BillDetails": {
+        "path": "src/components/BillDetails.jsx",
+        "description": "Handles bill metadata and receipt upload",
+        "dependencies": ["@mui/material", "react-datepicker"]
+      },
+      "ItemsSection": {
+        "path": "src/components/ItemsSection.jsx",
+        "description": "Manages bill items and their split configurations",
+        "dependencies": ["@mui/material", "@mui/icons-material"]
+      },
+      "ParticipantsSection": {
+        "path": "src/components/ParticipantsSection.jsx",
+        "description": "Manages bill participants and their payment details",
+        "dependencies": ["@mui/material"]
+      },
+      "SettlementSection": {
+        "path": "src/components/SettlementSection.jsx",
+        "description": "Displays settlement calculations and summary",
+        "dependencies": ["@mui/material"]
+      },
+      "Header": {
+        "path": "src/components/Header",
+        "description": "Application header with responsive design",
+        "files": ["headers.js", "Header.css"]
+      }
+    },
+    "utils": {
+      "billLoader": {
+        "path": "src/utils/billLoader.js",
+        "description": "Handles JSON bill data parsing and loading"
+      },
+      "imageProcessor": {
+        "path": "src/utils/imageProcessor.js",
+        "description": "Processes receipt images using OCR"
+      },
+      "settlementUtils": {
+        "path": "src/utils/settlementUtils.js",
+        "description": "Calculates bill settlements between participants"
+      }
+    },
+    "api": {
+      "billService": {
+        "path": "src/api/billService.js",
+        "description": "Handles bill saving and retrieval operations"
+      }
+    },
+    "assets": {
+      "path": "src/assets",
+      "files": ["logo.png", "avatar.png"]
+    }
+  },
+  "dependencies": {
+    "core": ["react", "react-dom"],
+    "ui": ["@mui/material", "@mui/icons-material", "@emotion/react", "@emotion/styled"],
+    "utils": ["react-datepicker", "@google/generative-ai", "axios"],
+    "testing": ["@testing-library/react", "@testing-library/jest-dom", "@testing-library/user-event"]
+  },
+  "structure": {
+    "components": "src/components",
+    "utils": "src/utils",
+    "api": "src/api",
+    "assets": "src/assets",
+    "bills": "bills"
+  }
+}

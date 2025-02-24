@@ -1,0 +1,100 @@
+/* /* 
+  1) Define a white-based color palette using CSS variables.
+  2) Adjust them as needed to achieve your preferred design.
+*/
+
+:root {
+    --white: #ffffff;
+    --off-white: #fafafa;
+    --light-gray: #f6f8fa;
+    --text-color: #333333;
+    --primary-shadow: rgba(0, 0, 0, 0.1);
+  }
+  
+  /* 
+    Base header styling:
+    - Fixed at the top
+    - Full width
+    - Flexible layout with space between items
+  */
+  .header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  
+    height: 80px; /* default height */
+    padding: 0 20px;
+  
+    background-color: var(--white);
+    box-shadow: 0 2px 5px var(--primary-shadow);
+    color: var(--text-color);
+  
+    transition: height 0.3s ease;
+    z-index: 999;
+  }
+  
+  /* The logo, title, and avatar are in separate containers */
+  .logo-container, 
+  .title, 
+  .avatar-container {
+    display: flex;
+    align-items: center;
+  }
+  
+  /* Logo styling (initial size) */
+  .logo {
+    height: 40px;
+    width: auto;
+  }
+  
+  /* Title styling (center text) */
+  .title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    text-align: center;
+  }
+  
+  /* Avatar styling (round) */
+  .avatar-container .avatar {
+    height: 40px;
+    width: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    object-fit: cover;
+  }
+  
+  /* 
+    SCROLLED STATE:
+    If scrolled, we reduce the header height by half
+    and scale down the logo & avatar proportionally.
+  */
+  .header.scrolled {
+    height: 40px;
+  }
+  
+  .header.scrolled .logo {
+    height: 20px;
+  }
+  
+  .header.scrolled .title {
+    font-size: 1rem;
+  }
+  
+  .header.scrolled .avatar {
+    height: 20px;
+    width: 20px;
+  }
+  
+  /* Optionally, add a bit more styling for the body to 
+     allow scrolling and see the effect properly. */
+  body {
+    margin: 0;
+    background-color: var(--off-white);
+    font-family: sans-serif;
+    /* Make the page tall so we can scroll */
+    min-height: 200vh;
+  } 

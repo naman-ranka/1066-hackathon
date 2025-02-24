@@ -23,7 +23,8 @@ export const loadBillFromJson = (jsonData) => {
         billDate: storeInformation.dateTimeOfPurchase ? new Date(storeInformation.dateTimeOfPurchase) : new Date(),
         location: storeInformation.storeAddress || '',
         // Optionally, include the payment method in notes if available
-        notes: paymentDetails?.paymentMethod ? `Payment method: ${paymentDetails.paymentMethod}` : ''
+        notes: paymentDetails?.paymentMethod ? `Payment method: ${paymentDetails.paymentMethod}` : '',
+        payers: [], // Initialize empty payers array
       };
   
       // Parse and map items
@@ -38,13 +39,13 @@ export const loadBillFromJson = (jsonData) => {
         includedParticipants: [] // No participant-specific data available
       }));
   
-      // Since the external JSON does not provide participants, we create an empty list
-      const participants = [];
+      // Since the external JSON does not provide billParticipants, we create an empty list
+      const billParticipants = [];
   
       return {
         billInfo,
         items,
-        participants,
+        billParticipants,
         isValid: true
       };
     } catch (error) {
@@ -97,4 +98,3 @@ export const loadBillFromJson = (jsonData) => {
       paymentMethod: "Credit Card"
     }
   };
-  
