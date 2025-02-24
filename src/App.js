@@ -19,7 +19,7 @@ function App() {
   const [receiptFile, setReceiptFile] = useState(null);
 
   // -------------------------------------------
-  // 1) Global array of “selected participants”
+  // Global array of “selected participants”
   // -------------------------------------------
   const [billParticipants, setBillParticipants] = useState([]); 
   // e.g. ["Participant 1", "Participant 2"] or [] if none are selected
@@ -69,9 +69,7 @@ function App() {
     console.log('Recalculating amounts...');
   };
 
-  // ---------------------------------------------------
-  // 2) Callback BillDetails will use to update selection
-  // ---------------------------------------------------
+  // Callback BillDetails will use to update selection
   const handleBillParticipantsChange = (selectedNames) => {
     // Example: selectedNames = ["Participant 1", "Participant 2"]
     setBillParticipants(selectedNames);
@@ -100,9 +98,12 @@ function App() {
           setNotes={setNotes}
           receiptFile={receiptFile}
           setReceiptFile={setReceiptFile}
-          participants={participants} 
-          
-          // Pass the global "selected participants" and the callback:
+
+          // Pass the participants array AND setParticipants down:
+          participants={participants}
+          setParticipants={setParticipants}
+
+          // Global "selected participants" + the callback
           billParticipants={billParticipants}
           onBillParticipantsChange={handleBillParticipantsChange}
         />
@@ -113,7 +114,6 @@ function App() {
           setItems={setItems}
           handleAddItem={handleAddItem}
           handleRemoveItem={handleRemoveItem}
-          // Provide the global selected participants
           billParticipants={billParticipants}
         />
 
