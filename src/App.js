@@ -198,10 +198,18 @@ export default function App() {
 
   const handleReceiptUpload = async (file) => {
     try {
-      const processedData = await processReceiptImage(file);
-      if (processedData.items && processedData.total) {
-        setItems(processedData.items);
-        setBillInfo(prev => ({ ...prev, totalAmount: processedData.total }));
+      // Process the image and get JSON response
+      const jsonData = await processReceiptImage(file);
+      
+      // Use existing billLoader to parse the data
+      const parsedData = loadBillFromJson(jsonData);
+      
+      if (parsedData.isValid) {
+        setBillInfo(parsedData.billInfo);
+        setItems(parsedData.items);
+        setBillParticipants(parsedData.billParticipants);
+      } else {
+        alert("Error processing receipt: " + parsedData.error);
       }
     } catch (error) {
       console.error('Failed to process receipt:', error);
