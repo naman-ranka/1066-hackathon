@@ -70,7 +70,7 @@ export default function App() {
   useEffect(() => {
     async function fetchAllParticipants() {
       try {
-        const response = await api.get("/participants/");
+        const response = await api.get("/global-participants/");
         setAllParticipants(response.data);
       } catch (error) {
         console.error("Error fetching billParticipants from backend:", error);
