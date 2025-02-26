@@ -1,4 +1,5 @@
-// No need for Gemini imports anymore since processing is moved to backend
+const API_URL = process.env.REACT_APP_API_URL;
+
 export async function processReceiptImage(imageFile) {
   try {
     console.log('Starting receipt processing...');
@@ -8,7 +9,7 @@ export async function processReceiptImage(imageFile) {
     formData.append('file', imageFile);
 
     // Send request to backend (note the trailing slash)
-    const response = await fetch('http://localhost:8000/api/process-receipt/', {
+    const response = await fetch(`${API_URL}/process-receipt/`, {
       method: 'POST',
       body: formData
     });

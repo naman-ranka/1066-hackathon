@@ -19,6 +19,14 @@ import { Container, Typography, Paper, Box, Button } from "@mui/material";
 // Helper function for minimal settlement
 import { calculateSettlement } from "./utils/settlementUtils";
 
+// Get API URL from environment variables
+const API_URL = process.env.REACT_APP_API_URL;
+
+// Configure axios
+const api = axios.create({
+    baseURL: API_URL
+});
+
 export default function App() {
   // ---------------------------
   // State
@@ -62,7 +70,7 @@ export default function App() {
   useEffect(() => {
     async function fetchAllParticipants() {
       try {
-        const response = await axios.get("http://localhost:8000/api/global-participants/");
+        const response = await api.get("/participants/");
         setAllParticipants(response.data);
       } catch (error) {
         console.error("Error fetching billParticipants from backend:", error);
@@ -190,22 +198,13 @@ export default function App() {
 
   const handleReceiptUpload = async (file) => {
     try {
-      // Process the image and get JSON response
-      const jsonData = await processReceiptImage(file);
-      
-      // Use existing billLoader to parse the data
-      const parsedData = loadBillFromJson(jsonData);
-      
-      if (parsedData.isValid) {
-        setBillInfo(parsedData.billInfo);
-        setItems(parsedData.items);
-        setBillParticipants(parsedData.billParticipants);
-      } else {
-        alert("Error processing receipt: " + parsedData.error);
+      const processedData = await processReceiptImage(file);
+      if (processedData.items && processedData.total) {
+        setItems(processedData.items);
+        setBillInfo(prev => ({ ...prev, totalAmount: processedData.total }));
       }
     } catch (error) {
-      console.error("Error processing receipt:", error);
-      alert("Error processing receipt: " + (error.message || "Unknown error"));
+      console.error('Failed to process receipt:', error);
     }
   };
 
