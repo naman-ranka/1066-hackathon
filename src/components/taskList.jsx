@@ -17,10 +17,11 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'; // Icon for expanding rows
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 
+const API_URL = process.env.REACT_APP_API_URL;
 
 // Configure axios base URL
 const api = axios.create({
-    baseURL: 'http://localhost:8000'
+    baseURL: API_URL
 });
 
 function TaskList() {
@@ -49,18 +50,16 @@ function TaskList() {
     const [filterType, setFilterType] = useState('all');
     const [filterStatus, setFilterStatus] = useState('all'); // Add status filter state
     const [expanded, setExpanded] = useState({});  // Track expanded rows: { taskId: boolean }
-    const [users, setUsers] = useState([]); // Store user data (id, username)
 
     useEffect(() => {
         fetchTasks();
-        fetchUsers();
     }, []);
 
     const fetchTasks = async () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await api.get('/api/tasks/');
+            const response = await api.get('/tasks/');
             setTasks(response.data);
         } catch (err) {
             setError('Failed to fetch tasks.');
@@ -70,15 +69,6 @@ function TaskList() {
         }
     };
 
-    const fetchUsers = async () => { // Fetch users for the "Assigned To" dropdown
-        try {
-            const response = await api.get('/api/users/');  // Replace with your actual users endpoint
-            setUsers(response.data);
-        } catch (error) {
-            console.error("Error fetching users:", error);
-            //  Handle error appropriately, perhaps setting an error state
-        }
-    };
     const handleAddTask = async () => {
         if (!newTask.title.trim() || !newTask.description.trim()) {
             setError("Title and Description cannot be empty");
@@ -87,7 +77,7 @@ function TaskList() {
         setLoading(true);
         setError(null);
         try {
-            const response = await api.post('/api/tasks/', newTask); // Send the entire newTask object
+            const response = await api.post('/tasks/', newTask); // Send the entire newTask object
             setTasks([...tasks, response.data]);
             setNewTask({ // Reset newTask to initial values
                 title: '',

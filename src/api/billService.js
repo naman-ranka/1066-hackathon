@@ -1,6 +1,8 @@
 // src/api/billService.js
 import axios from "axios";
 
+const API_URL = process.env.REACT_APP_API_URL;
+
 /**
  * Save a bill to the backend (Django)
  * @param {Object} billInfo - { billName, totalAmount, billDate, location, notes }
@@ -35,6 +37,6 @@ export async function saveBill(billInfo, items, billParticipants) {
   console.log("Payload to saveBill:", payload);
 
   // 2. Make the POST request to Django
-  const response = await axios.post("http://localhost:8000/api/bills/", payload);
+  const response = await axios.post(`${API_URL}/bills/`, payload);
   return response.data;
 }
