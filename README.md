@@ -1,71 +1,91 @@
-# Getting Started with Create React App
+# Bill Split App
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A sophisticated bill splitting application built with React that makes expense sharing hassle-free. The app allows users to easily manage group expenses, process receipts, and calculate optimal settlements.
 
-## Available Scripts
+## 🚀 Features
 
-In the project directory, you can run:
-### `npm install @mui/material @mui/icons-material @emotion/react @emotion/styled`
+- **Smart Receipt Processing**: Upload receipts to automatically extract bill details and items
+- **Flexible Split Options**: Multiple splitting methods supported:
+  - Equal splits
+  - Percentage-based splits
+  - Amount-based splits
+  - Share-based splits
+- **Dynamic Participant Management**: Add and manage participants globally or per bill
+- **Intelligent Settlement Calculation**: Optimized algorithm to minimize the number of transactions needed for settlement
+- **Bill Management**:
+  - Save and load bills in JSON format
+  - Add detailed bill information (name, date, location, notes)
+  - Real-time calculation of individual shares
+- **Responsive UI**: Built with Material-UI for a clean, modern interface
 
-### `npm start`
+## 🛠️ Technical Stack
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **Frontend**: React.js with Hooks
+- **UI Framework**: Material-UI (MUI)
+- **State Management**: React useState and useEffect hooks
+- **HTTP Client**: Axios for API communication
+- **Build Tool**: Webpack
+- **Testing**:
+  - Unit tests with Jest
+  - Integration tests
+  - Visual regression tests
+  - Accessibility tests
+  - Browser compatibility tests
+  - Performance tests
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## 🏗️ Architecture
 
-### `npm test`
+The application follows a modular architecture with:
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- **Components**: Reusable UI components (BillDetails, ItemsSection, ParticipantsSection, SettlementSection)
+- **Services**: API communication layer
+- **Utils**: Helper functions for:
+  - Bill calculations
+  - Image processing
+  - Settlement optimization
+  - Bill persistence
+  - Currency handling
 
-### `npm run build`
+## 💡 Implementation Highlights
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+- **Optimized Settlement Algorithm**: Implements a sophisticated algorithm to minimize the number of transactions needed for settling the bill
+- **Real-time Calculations**: Automatic recalculation of shares when items or participants change
+- **Error Handling**: Comprehensive error boundary implementation and input validation
+- **Type Safety**: Structured data models and validation
+- **Testing Coverage**: Extensive test suite covering unit, integration, and visual aspects
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## 🔧 Setup and Installation
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Set up environment variables:
+   - Create a .env file with REACT_APP_API_URL
 
-### `npm run eject`
+4. Start the development server:
+   ```bash
+   npm start
+   ```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## 🧪 Testing
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+Run the comprehensive test suite:
+```bash
+npm test
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+Different test categories:
+- Unit tests: `npm run test:unit`
+- Integration tests: `npm run test:integration`
+- Visual regression tests: `npm run test:visual`
+- Performance tests: `npm run test:performance`
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## 👥 Contributing
 
-## Learn More
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## 📝 License
 
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+This project is licensed under the MIT License - see the LICENSE file for details
