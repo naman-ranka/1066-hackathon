@@ -106,7 +106,7 @@ function TaskList() {
       setLoading(true);
       setError(null);
       try {
-          const response = await api.patch(`/api/tasks/${taskId}/`, updatedFields);
+          const response = await api.patch(`/tasks/${taskId}/`, updatedFields);
           setTasks(prevTasks =>
               prevTasks.map(task =>
                   task.id === taskId ? response.data : task
@@ -127,7 +127,7 @@ function TaskList() {
         setLoading(true);
         setError(null);
         try {
-            await api.delete(`/api/tasks/${taskId}/`);
+            await api.delete(`/tasks/${taskId}/`);
             setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
             setSuccessMessage("Task deleted successfully");
         } catch (err) {
@@ -226,7 +226,7 @@ function TaskList() {
         setLoading(true);
         setError(null);
         try {
-            const response = await api.put(`/api/tasks/${editTask.id}/`, editTask);
+            const response = await api.put(`/tasks/${editTask.id}/`, editTask);
             setTasks(prevTasks =>
                 prevTasks.map(task =>
                     task.id === editTask.id ? response.data : task
