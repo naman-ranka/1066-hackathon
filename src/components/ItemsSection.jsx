@@ -23,6 +23,13 @@ import {
   useMediaQuery,
   useTheme,
   InputAdornment,
+  ToggleButtonGroup,
+  ToggleButton,
+  Checkbox,
+  FormControlLabel,
+  Select,
+  MenuItem,
+  ButtonGroup,
 } from "@mui/material";
 import {
   Delete as DeleteIcon,
@@ -32,6 +39,13 @@ import {
   ExpandLess as ExpandLessIcon,
   Visibility as VisibilityIcon,
   MonetizationOn as MonetizationOnIcon,
+  GridView as GridViewIcon,
+  ViewList as ViewListIcon,
+  ViewColumn as ViewColumnIcon,
+  PersonAdd as PersonAddIcon,
+  PersonRemove as PersonRemoveIcon,
+  SelectAll as SelectAllIcon,
+  Cached as CachedIcon,
 } from "@mui/icons-material";
 
 import ItemSplitControl from "./ItemSplitControl";
@@ -142,10 +156,422 @@ export default function ItemsSection({ items, setItems, billParticipants }) {
     setItems((prev) =>
       prev.map((item) => {
         if (item.id === itemId) {
+          // When changing from unequal to equal, convert all participants with non-zero splits to included
+          if (newSplitType === "equal" && item.splitType !== "equal") {
+            const newIncludedParticipants = Object.keys(item.splits || {})
+              .filter(id => item.splits[id] && item.splits[id] > 0)
+              .map(id => id);
+            
+            // If no participants would be included, include all by default
+            if (newIncludedParticipants.length === 0) {
+              return { 
+                ...item, 
+                splitType: newSplitType,
+                includedParticipants: billParticipants.map(p => p.id)
+              };
+            }
+            
+            return { 
+              ...item, 
+              splitType: newSplitType,
+              includedParticipants: newIncludedParticipants
+            };
+          }
+          
           return { ...item, splitType: newSplitType };
         }
         return item;
       })
+    );
+  };
+
+  // --------------------------------------
+  // Matrix View Quick Actions
+  // --------------------------------------
+  const markAllEqual = (item) => {
+    setItems((prev) =>
+      prev.map((i) => {
+        if (i.id === item.id) {
+          return {
+            ...i,
+            splitType: "equal",
+            includedParticipants: billParticipants.map((p) => p.id),
+          };
+        }
+        return i;
+      })
+    );
+  };
+
+  const excludeAllFromItem = (item) => {
+    setItems((prev) =>
+      prev.map((i) => {
+        if (i.id === item.id) {
+          return {
+            ...i,
+            includedParticipants: [],
+          };
+        }
+        return i;
+      })
+    );
+  };
+
+  const splitEvenlyInMoney = (item) => {
+    const itemTotal = parseFloat(calculateItemTotal(item));
+    const perPersonAmount = billParticipants.length > 0 
+      ? (itemTotal / billParticipants.length).toFixed(2) 
+      : "0.00";
+      
+    const newSplits = {};
+    billParticipants.forEach(p => {
+      newSplits[p.id] = perPersonAmount;
+    });
+    
+    setItems((prev) =>
+      prev.map((i) => {
+        if (i.id === item.id) {
+          return {
+            ...i,
+            splitType: "unequal-money",
+            splits: newSplits
+          };
+        }
+        return i;
+      })
+    );
+  };
+
+  const distributeByPercentage = (item) => {
+    const perPersonPercent = billParticipants.length > 0 
+      ? (100 / billParticipants.length).toFixed(2) 
+      : "0.00";
+      
+    const newSplits = {};
+    billParticipants.forEach(p => {
+      newSplits[p.id] = perPersonPercent;
+    });
+    
+    setItems((prev) =>
+      prev.map((i) => {
+        if (i.id === item.id) {
+          return {
+            ...i,
+            splitType: "unequal-percent",
+            splits: newSplits
+          };
+        }
+        return i;
+      })
+    );
+  };
+
+  // --------------------------------------
+  // Matrix View Functions
+  // --------------------------------------
+  const renderMatrixCell = (item, participant) => {
+    if (item.splitType === "equal") {
+      // For equal splits, render a checkbox
+      const isIncluded = (item.includedParticipants || []).includes(participant.id);
+      
+      return (
+        <Checkbox 
+          checked={isIncluded}
+          onChange={() => handleToggleEqualParticipant(item.id, participant.id)}
+          size="small"
+          sx={{ padding: '4px' }}
+        />
+      );
+    } else {
+      // For unequal splits, render an input field
+      return (
+        <TextField
+          type="number"
+          size="small"
+          value={item.splits[participant.id] || ""}
+          onChange={(e) => handleItemSplitChange(item.id, participant.id, e.target.value)}
+          sx={{
+            width: "60px",
+            "& .MuiInputBase-input": {
+              fontSize: "0.75rem",
+              padding: "2px 4px",
+              height: "1.2rem",
+            },
+            "& .MuiOutlinedInput-root": {
+              height: "24px",
+            },
+          }}
+          InputProps={{
+            endAdornment: item.splitType === "unequal-percent" ? 
+              <InputAdornment position="end" sx={{ fontSize: "0.7rem" }}>%</InputAdornment> : null
+          }}
+        />
+      );
+    }
+  };
+
+  const renderMatrixSplitTypeChip = (item) => {
+    let label, color;
+    
+    switch (item.splitType) {
+      case "equal":
+        label = "Equal";
+        color = "primary";
+        break;
+      case "unequal-money":
+        label = "$";
+        color = "success";
+        break;
+      case "unequal-percent":
+        label = "%";
+        color = "warning";
+        break;
+      case "unequal-shares":
+        label = "Parts";
+        color = "info";
+        break;
+      default:
+        label = "Split";
+        color = "default";
+    }
+    
+    return (
+      <Chip
+        label={label}
+        size="small"
+        color={color}
+        sx={{ fontSize: "0.7rem", height: '20px', mr: 0.5 }}
+      />
+    );
+  };
+
+  // --------------------------------------
+  // Matrix View Render
+  // --------------------------------------
+  const renderMatrixView = () => {
+    if (items.length === 0) {
+      return (
+        <Paper 
+          variant="outlined" 
+          sx={{ 
+            p: 3, 
+            textAlign: 'center',
+            borderStyle: 'dashed',
+            borderWidth: '1px',
+            borderColor: 'grey.400',
+            backgroundColor: 'grey.50' 
+          }}
+        >
+          <Typography color="text.secondary" sx={{ mb: 2 }}>No items added yet</Typography>
+          <Button 
+            variant="contained" 
+            size="small" 
+            onClick={handleAddItem}
+            startIcon={<AddIcon />}
+          >
+            Add First Item
+          </Button>
+        </Paper>
+      );
+    }
+
+    return (
+      <Box sx={{ mb: 2 }}>
+        <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={handleAddItem}
+            startIcon={<AddIcon sx={{ fontSize: "0.9rem" }} />}
+            sx={{ fontSize: "0.8rem", py: 0.5, mr: 1 }}
+          >
+            Add New Item
+          </Button>
+          
+          {/* Quick Actions for all items */}
+          {items.length > 0 && (
+            <Tooltip title="Quick Split Options">
+              <ButtonGroup size="small" variant="outlined" sx={{ ml: 'auto' }}>
+                <Tooltip title="Mark all items as equal split">
+                  <Button 
+                    size="small" 
+                    onClick={() => {
+                      setItems(prev => prev.map(item => ({
+                        ...item,
+                        splitType: "equal",
+                        includedParticipants: billParticipants.map(p => p.id)
+                      })));
+                    }}
+                    sx={{ px: 1 }}
+                  >
+                    <SelectAllIcon sx={{ fontSize: "0.9rem" }} />
+                  </Button>
+                </Tooltip>
+                <Tooltip title="Reset all items to equal split">
+                  <Button 
+                    size="small" 
+                    onClick={() => {
+                      setItems(prev => prev.map(item => ({
+                        ...item,
+                        splitType: "equal",
+                        includedParticipants: [],
+                        splits: {}
+                      })));
+                    }}
+                    sx={{ px: 1 }}
+                  >
+                    <CachedIcon sx={{ fontSize: "0.9rem" }} />
+                  </Button>
+                </Tooltip>
+              </ButtonGroup>
+            </Tooltip>
+          )}
+        </Box>
+        
+        <Paper variant="outlined">
+          <TableContainer>
+            <Table
+              size="small"
+              sx={{
+                "& .MuiTableCell-root": {
+                  padding: "4px 8px",
+                  fontSize: "0.75rem",
+                  whiteSpace: "nowrap",
+                },
+              }}
+            >
+              <TableHead>
+                <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
+                  <TableCell sx={{ minWidth: '140px' }}>Item</TableCell>
+                  <TableCell>Amount</TableCell>
+                  <TableCell>Split</TableCell>
+                  {billParticipants.map((participant) => (
+                    <TableCell key={participant.id} align="center">
+                      <Typography sx={{ fontSize: "0.75rem", fontWeight: 500 }}>
+                        {participant.name}
+                      </Typography>
+                    </TableCell>
+                  ))}
+                  <TableCell>Actions</TableCell>
+                </TableRow>
+              </TableHead>
+
+              <TableBody>
+                {items.map((item) => {
+                  return (
+                    <TableRow
+                      key={item.id}
+                      sx={{
+                        "&:hover": { backgroundColor: "#f8f9fa" },
+                      }}
+                    >
+                      {/* Item Name */}
+                      <TableCell>
+                        <TextField
+                          size="small"
+                          value={item.name}
+                          onChange={(e) => handleItemChange(item.id, "name", e.target.value)}
+                          placeholder="Item description"
+                          sx={{
+                            width: '100%',
+                            "& .MuiInputBase-input": {
+                              fontSize: "0.75rem",
+                              padding: "2px 4px",
+                              height: "1.2rem",
+                            },
+                            "& .MuiOutlinedInput-root": {
+                              height: "24px",
+                            },
+                          }}
+                        />
+                      </TableCell>
+
+                      {/* Item Amount */}
+                      <TableCell>
+                        <Typography sx={{ fontSize: "0.75rem", fontWeight: 500 }}>
+                          ${calculateItemTotal(item)}
+                        </Typography>
+                      </TableCell>
+
+                      {/* Split Type */}
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', flexDirection: 'column', gap: 0.5 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                            {renderMatrixSplitTypeChip(item)}
+                            <Select
+                              value={item.splitType}
+                              onChange={(e) => handleSplitTypeChange(item.id, e.target.value)}
+                              size="small"
+                              sx={{
+                                height: '24px',
+                                fontSize: '0.75rem',
+                                flex: 1,
+                                '& .MuiSelect-select': {
+                                  padding: '2px 4px',
+                                }
+                              }}
+                            >
+                              <MenuItem value="equal" sx={{ fontSize: '0.75rem' }}>Equal</MenuItem>
+                              <MenuItem value="unequal-money" sx={{ fontSize: '0.75rem' }}>$</MenuItem>
+                              <MenuItem value="unequal-percent" sx={{ fontSize: '0.75rem' }}>%</MenuItem>
+                              <MenuItem value="unequal-shares" sx={{ fontSize: '0.75rem' }}>Parts</MenuItem>
+                            </Select>
+                          </Box>
+                          
+                          {/* Quick Actions */}
+                          <ButtonGroup size="small" variant="text" sx={{ '& .MuiButton-root': { minWidth: '24px', px: 0.5 } }}>
+                            <Tooltip title="Split equally among all">
+                              <Button onClick={() => markAllEqual(item)}>
+                                <SelectAllIcon sx={{ fontSize: "0.7rem" }} />
+                              </Button>
+                            </Tooltip>
+                            <Tooltip title="Exclude all">
+                              <Button onClick={() => excludeAllFromItem(item)}>
+                                <PersonRemoveIcon sx={{ fontSize: "0.7rem" }} />
+                              </Button>
+                            </Tooltip>
+                            <Tooltip title="Split evenly in money">
+                              <Button onClick={() => splitEvenlyInMoney(item)}>
+                                <MonetizationOnIcon sx={{ fontSize: "0.7rem" }} />
+                              </Button>
+                            </Tooltip>
+                            <Tooltip title="Split by percentage">
+                              <Button onClick={() => distributeByPercentage(item)}>
+                                %
+                              </Button>
+                            </Tooltip>
+                          </ButtonGroup>
+                        </Box>
+                      </TableCell>
+
+                      {/* Participant Cells */}
+                      {billParticipants.map((participant) => (
+                        <TableCell key={participant.id} align="center">
+                          {renderMatrixCell(item, participant)}
+                        </TableCell>
+                      ))}
+
+                      {/* Actions */}
+                      <TableCell>
+                        <Tooltip title="Remove Item">
+                          <IconButton
+                            color="error"
+                            onClick={() => handleRemoveItem(item.id)}
+                            size="small"
+                            sx={{ padding: "2px" }}
+                          >
+                            <DeleteIcon sx={{ fontSize: "0.9rem" }} />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+      </Box>
     );
   };
 
@@ -552,22 +978,38 @@ export default function ItemsSection({ items, setItems, billParticipants }) {
           2. Items
         </Typography>
         
-        {!isMobile && (
-          <Box>
-            <Tooltip title={viewMode === 'table' ? "Switch to Card View" : "Switch to Table View"}>
-              <IconButton 
-                size="small" 
-                onClick={() => setViewMode(viewMode === 'table' ? 'card' : 'table')}
-              >
-                {viewMode === 'table' ? <VisibilityIcon fontSize="small" /> : <EditIcon fontSize="small" />}
-              </IconButton>
+        <ToggleButtonGroup
+          size="small"
+          value={viewMode}
+          exclusive
+          onChange={(e, newView) => {
+            if (newView !== null) {
+              setViewMode(newView);
+            }
+          }}
+          aria-label="view mode"
+        >
+          <ToggleButton value="card" aria-label="card view" sx={{ padding: '4px' }}>
+            <Tooltip title="Card View">
+              <GridViewIcon fontSize="small" />
             </Tooltip>
-          </Box>
-        )}
+          </ToggleButton>
+          <ToggleButton value="table" aria-label="table view" sx={{ padding: '4px' }}>
+            <Tooltip title="Table View">
+              <ViewListIcon fontSize="small" />
+            </Tooltip>
+          </ToggleButton>
+          <ToggleButton value="matrix" aria-label="matrix view" sx={{ padding: '4px' }}>
+            <Tooltip title="Split Matrix View">
+              <ViewColumnIcon fontSize="small" />
+            </Tooltip>
+          </ToggleButton>
+        </ToggleButtonGroup>
       </Box>
 
-      {/* Render either table or card view based on viewMode */}
-      {viewMode === 'table' ? renderTableView() : renderCardView()}
+      {/* Render either table, card, or matrix view based on viewMode */}
+      {viewMode === 'table' ? renderTableView() : 
+       viewMode === 'card' ? renderCardView() : renderMatrixView()}
 
       {/* Bill Summary */}
       <Paper 

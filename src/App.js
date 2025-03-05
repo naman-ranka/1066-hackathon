@@ -271,7 +271,9 @@ export default function App() {
           billInfo={billInfo}
           setBillInfo={setBillInfo}
           onUploadReceipt={handleReceiptUpload}
-          billParticipants={billParticipants} // <--- add this
+          billParticipants={billParticipants}
+          items={items}
+          settlement={settlement}
         />
       </Box>
 
