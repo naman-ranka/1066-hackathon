@@ -14,7 +14,8 @@ import ParticipantsSection from "./components/ParticipantsSection";
 import SettlementSection from "./components/SettlementSection";
 
 // MUI imports
-import { Container, Typography, Paper, Box, Button } from "@mui/material";
+import { Container, Typography, Paper, Box, Button, useMediaQuery, useTheme, Fab, Drawer, List, ListItem, ListItemText, Divider } from "@mui/material";
+import { Add as AddIcon, NavigateNext, NavigateBefore, SaveAlt as SaveAltIcon } from '@mui/icons-material';
 
 // Helper function for minimal settlement
 import { calculateSettlement } from "./utils/settlementUtils";
@@ -28,6 +29,11 @@ const api = axios.create({
 });
 
 export default function App() {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const [activeStep, setActiveStep] = useState(0);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  
   // ---------------------------
   // State
   // ---------------------------
@@ -38,7 +44,6 @@ export default function App() {
     location: "",
     notes: "",
     payers: [], // array of {participantId, name, amount}
-
   });
 
   const [allParticipants, setAllParticipants] = useState([]);
@@ -80,6 +85,25 @@ export default function App() {
     fetchAllParticipants();
   }, []);
 
+  // ---------------------------
+  // Navigation and Mobile UI
+  // ---------------------------
+  const handleNext = () => {
+    setActiveStep((prevStep) => Math.min(prevStep + 1, 3));
+  };
+
+  const handleBack = () => {
+    setActiveStep((prevStep) => Math.max(prevStep - 1, 0));
+  };
+
+  const handleStepChange = (step) => {
+    setActiveStep(step);
+    setDrawerOpen(false);
+  };
+
+  const toggleDrawer = () => {
+    setDrawerOpen(!drawerOpen);
+  };
 
   // ---------------------------
   // Calculation
@@ -96,7 +120,7 @@ export default function App() {
       total += calculateItemTotal(item);
     });
 
-    // Reset each participant’s amountOwed
+    // Reset each participant's amountOwed
     const updatedParticipants = billParticipants.map((p) => ({ ...p, amountOwed: 0 }));
 
     // Distribute costs per item
@@ -216,90 +240,197 @@ export default function App() {
     }
   };
 
+  // Define section components for mobile navigation
+  const sections = [
+    { title: "Participants", component: ParticipantsSection, props: { allParticipants, billParticipants, setBillParticipants, billInfo } },
+    { title: "Bill Details", component: BillDetails, props: { billInfo, setBillInfo, onUploadReceipt: handleReceiptUpload, billParticipants, items, settlement } },
+    { title: "Items", component: ItemsSection, props: { items, setItems, billParticipants } },
+    { title: "Settlement", component: SettlementSection, props: { items, billInfo, billParticipants, settlement } }
+  ];
+
   // ---------------------------
   // Render
   // ---------------------------
+  const renderCurrentSection = () => {
+    const CurrentSection = sections[activeStep].component;
+    return <CurrentSection {...sections[activeStep].props} />;
+  };
+
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Container maxWidth="lg" sx={{ py: 4, mt: 8 }}>
       <Header />
-      <br />
-      <br />
-      <br />
+      
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Typography variant="h4" gutterBottom sx={{ mb: 0 }}>
+        <Typography variant="h4" gutterBottom sx={{ mb: 0, fontSize: isMobile ? '1.5rem' : '2.125rem' }}>
           Bill Splitting Application
         </Typography>
-        <Box>
-          <input
-            accept=".json"
-            style={{ display: 'none' }}
-            id="json-file-input"
-            type="file"
-            onChange={handleJsonUpload}
-          />
-          <label htmlFor="json-file-input">
+        
+        {!isMobile && (
+          <Box>
+            <input
+              accept=".json"
+              style={{ display: 'none' }}
+              id="json-file-input"
+              type="file"
+              onChange={handleJsonUpload}
+            />
+            <label htmlFor="json-file-input">
+              <Button 
+                variant="outlined" 
+                component="span"
+                sx={{ mr: 2 }}
+              >
+                Load from JSON
+              </Button>
+            </label>
             <Button 
-              variant="outlined" 
-              component="span"
-              sx={{ mr: 2 }}
+              variant="contained" 
+              color="primary" 
+              onClick={handleSave}
+              sx={{ minWidth: 100 }}
             >
-              Load from JSON
+              Save Bill
             </Button>
-          </label>
-          <Button 
-            variant="contained" 
-            color="primary" 
-            onClick={handleSave}
-            sx={{ minWidth: 100 }}
+          </Box>
+        )}
+      </Box>
+
+      {/* Mobile view with step navigation */}
+      {isMobile ? (
+        <Box>
+          <Paper 
+            variant="outlined" 
+            sx={{ 
+              p: 2, 
+              mb: 3, 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              borderRadius: 2
+            }}
           >
-            Save Bill
-          </Button>
+            <Button 
+              onClick={toggleDrawer}
+              variant="text" 
+              color="primary"
+              size="small"
+            >
+              {sections[activeStep].title}
+            </Button>
+            
+            <Box sx={{ display: 'flex' }}>
+              <Button
+                onClick={handleBack}
+                disabled={activeStep === 0}
+                size="small"
+                sx={{ minWidth: 'auto', mr: 1 }}
+              >
+                <NavigateBefore />
+              </Button>
+              
+              <Button
+                onClick={handleNext}
+                disabled={activeStep === sections.length - 1}
+                size="small"
+                sx={{ minWidth: 'auto' }}
+              >
+                <NavigateNext />
+              </Button>
+            </Box>
+          </Paper>
+          
+          <Drawer
+            anchor="left"
+            open={drawerOpen}
+            onClose={() => setDrawerOpen(false)}
+          >
+            <List sx={{ width: 250 }}>
+              {sections.map((section, index) => (
+                <ListItem 
+                  button 
+                  key={index} 
+                  onClick={() => handleStepChange(index)}
+                  selected={activeStep === index}
+                  sx={{
+                    backgroundColor: activeStep === index ? 'primary.light' : 'inherit'
+                  }}
+                >
+                  <ListItemText primary={`${index + 1}. ${section.title}`} />
+                </ListItem>
+              ))}
+              <Divider />
+              <ListItem button onClick={handleSave}>
+                <ListItemText primary="Save Bill" />
+              </ListItem>
+              <ListItem button>
+                <input
+                  accept=".json"
+                  style={{ display: 'none' }}
+                  id="json-file-input-mobile"
+                  type="file"
+                  onChange={handleJsonUpload}
+                />
+                <label htmlFor="json-file-input-mobile" style={{ width: '100%' }}>
+                  <ListItemText primary="Load from JSON" sx={{ cursor: 'pointer' }} />
+                </label>
+              </ListItem>
+            </List>
+          </Drawer>
+
+          <Box component={Paper} variant="outlined" sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+            {renderCurrentSection()}
+          </Box>
+          
+          <Fab 
+            color="primary" 
+            aria-label="save" 
+            sx={{ position: 'fixed', bottom: 16, right: 16 }}
+            onClick={handleSave}
+          >
+            <SaveAltIcon />
+          </Fab>
         </Box>
-      </Box>
+      ) : (
+        // Desktop view with all sections
+        <>
+          <Box component={Paper} variant="outlined" sx={{ p: 3, mb: 3 }}>
+            <ParticipantsSection
+              allParticipants={allParticipants}
+              billParticipants={billParticipants}
+              setBillParticipants={setBillParticipants}
+              billInfo={billInfo}
+            />
+          </Box>
 
-      <Box component={Paper} variant="outlined" sx={{ p: 3, mb: 3 }}>
-        <ParticipantsSection
-          allParticipants={allParticipants}
-          billParticipants={billParticipants}
-          setBillParticipants={setBillParticipants}
-          billInfo={billInfo}
-        />
-      </Box>
+          <Box component={Paper} variant="outlined" sx={{ p: 3, mb: 3 }}>
+            <BillDetails
+              billInfo={billInfo}
+              setBillInfo={setBillInfo}
+              onUploadReceipt={handleReceiptUpload}
+              billParticipants={billParticipants}
+              items={items}
+              settlement={settlement}
+            />
+          </Box>
 
-      <Box component={Paper} variant="outlined" sx={{ p: 3, mb: 3 }}>
-        <BillDetails
-          billInfo={billInfo}
-          setBillInfo={setBillInfo}
-          onUploadReceipt={handleReceiptUpload}
-          billParticipants={billParticipants}
-          items={items}
-          settlement={settlement}
-        />
-      </Box>
+          <Box component={Paper} variant="outlined" sx={{ p: 3, mb: 3 }}>
+            <ItemsSection
+              items={items}
+              setItems={setItems}
+              billParticipants={billParticipants}
+            />
+          </Box>
 
-      <Box component={Paper} variant="outlined" sx={{ p: 3, mb: 3 }}>
-        <ItemsSection
-          items={items}
-          setItems={setItems}
-          billParticipants={billParticipants}
-        />
-      </Box>
-
-      {/* <Box component={Paper} variant="outlined" sx={{ p: 3, mb: 3 }}>
-        <ParticipantsSection
-          billParticipants={billParticipants}
-          setBillParticipants={setBillParticipants}
-        />
-      </Box> */}
-
-      <Box component={Paper} variant="outlined" sx={{ p: 3, mb: 3 }}>
-        <SettlementSection
-          items={items}
-          billInfo={billInfo}
-          billParticipants={billParticipants}
-          settlement={settlement}
-        />
-      </Box>
+          <Box component={Paper} variant="outlined" sx={{ p: 3, mb: 3 }}>
+            <SettlementSection
+              items={items}
+              billInfo={billInfo}
+              billParticipants={billParticipants}
+              settlement={settlement}
+            />
+          </Box>
+        </>
+      )}
     </Container>
   );
 }

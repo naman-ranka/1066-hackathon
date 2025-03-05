@@ -18,26 +18,32 @@
     - Flexible layout with space between items
   */
   .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  
-    height: 80px; /* default height */
-    padding: 0 20px;
-  
-    background-color: var(--white);
-    box-shadow: 0 2px 5px var(--primary-shadow);
-    color: var(--text-color);
-  
-    transition: height 0.3s ease;
-    z-index: 999;
+    z-index: 1000;
+    transition: all 0.3s ease;
   }
   
-  /* The logo, title, and avatar are in separate containers */
+  /* For dark mode */
+  .dark .header {
+    background-color: #1e1e1e;
+    color: #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+  
+  .header.scrolled {
+    padding: 5px 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
   .logo-container, 
   .title, 
   .avatar-container {
@@ -48,23 +54,83 @@
   /* Logo styling (initial size) */
   .logo {
     height: 40px;
-    width: auto;
+    margin-right: 10px;
+    transition: height 0.3s ease;
+  }
+  
+  .scrolled .logo {
+    height: 30px;
   }
   
   /* Title styling (center text) */
   .title {
     font-size: 1.5rem;
-    font-weight: 600;
+    font-weight: bold;
+    flex-grow: 1;
     text-align: center;
+    transition: font-size 0.3s ease;
+  }
+  
+  .mobile-title {
+    font-size: 1rem;
+    flex-grow: 0;
+  }
+  
+  .scrolled .title {
+    font-size: 1.3rem;
+  }
+  
+  .controls-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .avatar-container {
+    position: relative;
   }
   
   /* Avatar styling (round) */
   .avatar-container .avatar {
-    height: 40px;
-    width: 40px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     cursor: pointer;
-    object-fit: cover;
+    transition: transform 0.2s;
+  }
+  
+  .avatar:hover {
+    transform: scale(1.1);
+  }
+  
+  .scrolled .avatar {
+    width: 30px;
+    height: 30px;
+  }
+  
+  .mobile-menu-button {
+    margin-right: 10px;
+  }
+  
+  /* Mobile styles */
+  @media (max-width: 600px) {
+    .header {
+      padding: 8px 12px;
+    }
+    
+    .title {
+      font-size: 1.2rem;
+      text-align: left;
+    }
+    
+    .logo {
+      height: 30px;
+    }
+    
+    .avatar {
+      width: 30px;
+      height: 30px;
+    }
   }
   
   /* 
@@ -97,4 +163,4 @@
     font-family: sans-serif;
     /* Make the page tall so we can scroll */
     min-height: 200vh;
-  } 
+  }
