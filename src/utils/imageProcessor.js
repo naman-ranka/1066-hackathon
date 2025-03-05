@@ -36,3 +36,43 @@ export async function processReceiptImage(imageFile) {
     throw error;
   }
 }
+
+/**
+ * Process multiple receipt images with optional LLM support
+ * @param {File[]} imageFiles Array of image files
+ * @param {boolean} useLLM Whether to use LLM for enhanced processing
+ * @returns {Promise<object>} Structured bill data
+ */
+export async function processMultipleReceiptImages(imageFiles, useLLM = true) {
+  try {
+    console.log('Starting multi-image receipt processing...');
+    
+    // Create form data to send the files
+    const formData = new FormData();
+    
+    // Append all files
+    imageFiles.forEach(file => {
+      formData.append('files', file);
+    });
+    
+    // Add processing option
+    formData.append('use_llm', useLLM ? 'true' : 'false');
+    
+    // Send request to backend
+    const response = await fetch(`${API_URL}/process-images/`, {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    return data;
+  } catch (error) {
+    console.error('Error in processMultipleReceiptImages:', error);
+    throw error;
+  }
+}

@@ -9,9 +9,11 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  IconButton
+  IconButton,
+  Divider
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
+import EnhancedReceiptUpload from "./EnhancedReceiptUpload";
 
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -136,6 +138,18 @@ export default function BillDetails({
   // Example total of amounts from tempPayers
   const partialSum = tempPayers.reduce((acc, p) => acc + p.amount, 0);
 
+  // ----------------------------
+  // Enhanced Receipt Upload
+  // ----------------------------
+  const handleProcessComplete = (data) => {
+    // Process the data returned from the EnhancedReceiptUpload component
+    console.log("Receipt processing complete:", data);
+    
+    // Use the existing onUploadReceipt function
+    // This assumes the backend returns data in a format compatible with the existing flow
+    onUploadReceipt(data);
+  };
+
   return (
     <Box sx={{ mb: 3 }}>
       <Typography variant="h6" gutterBottom>
@@ -148,7 +162,7 @@ export default function BillDetails({
         name="billName"
         value={billInfo.billName}
         onChange={handleChange}
-        placeholder="e.g., Dinner at Joe’s"
+        placeholder="e.g., Dinner at Joe's"
         fullWidth
         margin="dense"
       />
@@ -182,7 +196,7 @@ export default function BillDetails({
             name="location"
             value={billInfo.location}
             onChange={handleChange}
-            placeholder="e.g., Joe’s Diner"
+            placeholder="e.g., Joe's Diner"
             fullWidth
             margin="dense"
           />
@@ -217,18 +231,53 @@ export default function BillDetails({
         </Box>
       </Box>
 
-      {/* Upload Receipt */}
-      <Box sx={{ mt: 2 }}>
-        <Typography variant="subtitle2">Upload Receipt (OCR)</Typography>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => {
-            if (e.target.files && e.target.files[0]) {
-              onUploadReceipt(e.target.files[0]);
-            }
-          }}
-        />
+      {/* Upload Receipt Section */}
+      <Box sx={{ mt: 3, p: 2, border: "1px solid #ccc", borderRadius: 2 }}>
+        <Typography variant="subtitle2" gutterBottom>
+          Upload Receipt
+        </Typography>
+        
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12}>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              Upload a receipt image to automatically extract bill details.
+            </Typography>
+          </Grid>
+          
+          {/* Simple Upload (Original method) */}
+          <Grid item xs={12} sm={6}>
+            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+              <Typography variant="caption" color="text.secondary" gutterBottom>
+                Simple Upload (Single Image):
+              </Typography>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    onUploadReceipt(e.target.files[0]);
+                  }
+                }}
+                style={{ marginBottom: 1 }}
+              />
+            </Box>
+          </Grid>
+          
+          <Grid item xs={12} sm={6}>
+            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+              <Typography variant="caption" color="text.secondary" gutterBottom>
+                Advanced Upload with OCR+LLM:
+              </Typography>
+              <EnhancedReceiptUpload onProcessComplete={handleProcessComplete} />
+            </Box>
+          </Grid>
+          
+          <Grid item xs={12}>
+            <Typography variant="caption" color="text.secondary">
+              * Use Enhanced Upload for multiple images or advanced processing options.
+            </Typography>
+          </Grid>
+        </Grid>
       </Box>
 
       {/* Dialog for editing payers */}
