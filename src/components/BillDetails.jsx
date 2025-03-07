@@ -39,7 +39,7 @@ export default function BillDetails({
   billInfo,
   setBillInfo,
   onUploadReceipt,
-  billParticipants = [],
+  participants = [],
   items = [],
   settlement = [],
 }) {
@@ -58,20 +58,20 @@ export default function BillDetails({
   // When the component first mounts or if total changes,
   // ensure we have at least 1 payer if none are set.
   useEffect(() => {
-    if (billInfo.payers.length === 0 && billParticipants.length > 0) {
+    if (billInfo.payers.length === 0 && participants.length > 0) {
       // Default: first participant pays the entire bill
       setBillInfo((prev) => ({
         ...prev,
         payers: [
           {
-            participantId: billParticipants[0].id,
-            name: billParticipants[0].name,
+            participantId: participants[0].id,
+            name: participants[0].name,
             amount: prev.totalAmount || 0,
           },
         ],
       }));
     }
-  }, [billInfo.payers, billInfo.totalAmount, billParticipants, setBillInfo]);
+  }, [billInfo.payers, billInfo.totalAmount, participants, setBillInfo]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -258,7 +258,7 @@ export default function BillDetails({
         return JSON.stringify({
           billInfo,
           items,
-          billParticipants,
+          participants,
           settlement
         }, null, 2);
       
@@ -278,7 +278,7 @@ export default function BillDetails({
         // Participants section
         csvContent += '\nParticipants:\n';
         csvContent += 'Name,Paid,Owed,Balance\n';
-        billParticipants.forEach(p => {
+        participants.forEach(p => {
           const payer = billInfo.payers.find(payer => payer.participantId === p.id);
           const amountPaid = payer ? payer.amount : 0;
           const balance = amountPaid - p.amountOwed;
@@ -308,7 +308,7 @@ export default function BillDetails({
         });
         
         textSummary += `\nParticipants:\n`;
-        billParticipants.forEach(p => {
+        participants.forEach(p => {
           const payer = billInfo.payers.find(payer => payer.participantId === p.id);
           const amountPaid = payer ? payer.amount : 0;
           const balance = amountPaid - p.amountOwed;
@@ -513,12 +513,12 @@ export default function BillDetails({
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             Select which participants paid, and specify how much they contributed.
           </Typography>
-          {billParticipants.length === 0 && (
+          {participants.length === 0 && (
             <Typography color="text.secondary">
               No participants available. Please add participants first.
             </Typography>
           )}
-          {billParticipants.map((participant) => {
+          {participants.map((participant) => {
             // see if they're in tempPayers
             const existing = tempPayers.find((p) => p.participantId === participant.id);
             return (

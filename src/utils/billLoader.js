@@ -39,13 +39,13 @@ export const loadBillFromJson = (jsonData) => {
         includedParticipants: [] // No participant-specific data available
       }));
   
-      // Since the external JSON does not provide billParticipants, we create an empty list
-      const billParticipants = [];
+      // Since the external JSON does not provide participants, we create an empty list
+      const participants = [];
   
       return {
         billInfo,
         items,
-        billParticipants,
+        participants,
         isValid: true
       };
     } catch (error) {

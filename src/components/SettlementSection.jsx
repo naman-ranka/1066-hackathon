@@ -60,7 +60,7 @@ const QRCodeSVG = ({ value, size, ...props }) => (
   </div>
 );
 
-export default function SettlementSection({ items, billInfo, billParticipants, settlement }) {
+export default function SettlementSection({ items, billInfo, participants, settlement }) {
   const theme = useTheme();
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
@@ -316,7 +316,7 @@ export default function SettlementSection({ items, billInfo, billParticipants, s
             </Typography>
           </Grid>
           
-          {billParticipants.map((participant) => {
+          {participants.map((participant) => {
             const amountPaid = getParticipantTotal(participant.id);
             const netBalance = amountPaid - participant.amountOwed;
             const status = netBalance > 0 ? 'creditor' : netBalance < 0 ? 'debtor' : 'settled';

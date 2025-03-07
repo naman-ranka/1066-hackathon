@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./styles.css";
-import { saveBill } from "./api/billService";
+import { saveBill, fetchGroupParticipants } from "./api/billService";
 import { loadBillFromJson } from "./utils/billLoader";
 import { processReceiptImage } from "./utils/imageProcessor";
 import axios from "axios";
@@ -43,10 +43,11 @@ export default function App() {
     billDate: new Date(),
     location: "",
     notes: "",
-    payers: [], // array of {participantId, name, amount}
+    payers: [],
   });
 
-  const [allParticipants, setAllParticipants] = useState([]);
+  const [participants, setParticipants] = useState([]);
+  const [loadingParticipants, setLoadingParticipants] = useState(false);
 
   const [items, setItems] = useState([
     {
@@ -61,7 +62,6 @@ export default function App() {
     },
   ]);
 
-  const [billParticipants, setBillParticipants] = useState([]);
   const [settlement, setSettlement] = useState([]);
 
   // ---------------------------
@@ -70,19 +70,26 @@ export default function App() {
   useEffect(() => {
     recalculateBill();
     // eslint-disable-next-line
-  }, [items, billParticipants]);
+  }, [items, participants]);
 
+  // Fetch participants
   useEffect(() => {
-    async function fetchAllParticipants() {
+    async function fetchParticipants() {
+      setLoadingParticipants(true);
       try {
-        const response = await api.get("/global-participants/");
-        setAllParticipants(response.data);
+        const fetchedParticipants = await fetchGroupParticipants();
+        setParticipants(fetchedParticipants.map(p => ({
+          ...p,
+          amountOwed: 0
+        })));
+        setLoadingParticipants(false);
       } catch (error) {
-        console.error("Error fetching billParticipants from backend:", error);
+        console.error("Error fetching participants:", error);
+        setLoadingParticipants(false);
       }
     }
   
-    fetchAllParticipants();
+    fetchParticipants();
   }, []);
 
   // ---------------------------
@@ -121,7 +128,7 @@ export default function App() {
     });
 
     // Reset each participant's amountOwed
-    const updatedParticipants = billParticipants.map((p) => ({ ...p, amountOwed: 0 }));
+    const updatedParticipants = participants.map((p) => ({ ...p, amountOwed: 0 }));
 
     // Distribute costs per item
     items.forEach((item) => {
@@ -181,13 +188,13 @@ export default function App() {
     const minimalTxns = calculateSettlement(updatedParticipants);
 
     setBillInfo((prev) => ({ ...prev, totalAmount: Number(total.toFixed(2)) }));
-    setBillParticipants(updatedParticipants);
+    setParticipants(updatedParticipants);
     setSettlement(minimalTxns);
   };
 
   const handleSave = async () => {
     try {
-      const result = await saveBill(billInfo, items, billParticipants);
+      const result = await saveBill(billInfo, items, participants);
       alert("Bill saved successfully!");
       console.log("Saved bill:", result);
     } catch (error) {
@@ -208,7 +215,24 @@ export default function App() {
           if (parsedData.isValid) {
             setBillInfo(parsedData.billInfo);
             setItems(parsedData.items);
-            setBillParticipants(parsedData.billParticipants);
+            // Merge loaded participants with existing participants
+            if (parsedData.participants && parsedData.participants.length > 0) {
+              setParticipants(prev => {
+                // Create a map of existing participants by ID
+                const existingMap = new Map(prev.map(p => [p.id, p]));
+                
+                // Update or add participants from the JSON
+                parsedData.participants.forEach(p => {
+                  if (existingMap.has(p.id)) {
+                    existingMap.set(p.id, { ...existingMap.get(p.id), ...p });
+                  } else {
+                    existingMap.set(p.id, p);
+                  }
+                });
+                
+                return Array.from(existingMap.values());
+              });
+            }
           } else {
             alert("Error loading JSON: " + parsedData.error);
           }
@@ -231,7 +255,20 @@ export default function App() {
       if (parsedData.isValid) {
         setBillInfo(parsedData.billInfo);
         setItems(parsedData.items);
-        setBillParticipants(parsedData.billParticipants);
+        // Update with any new participants
+        if (parsedData.participants && parsedData.participants.length > 0) {
+          setParticipants(prev => {
+            const existingMap = new Map(prev.map(p => [p.id, p]));
+            parsedData.participants.forEach(p => {
+              if (existingMap.has(p.id)) {
+                existingMap.set(p.id, { ...existingMap.get(p.id), ...p });
+              } else {
+                existingMap.set(p.id, p);
+              }
+            });
+            return Array.from(existingMap.values());
+          });
+        }
       } else {
         alert("Error processing receipt: " + parsedData.error);
       }
@@ -242,10 +279,10 @@ export default function App() {
 
   // Define section components for mobile navigation
   const sections = [
-    { title: "Participants", component: ParticipantsSection, props: { allParticipants, billParticipants, setBillParticipants, billInfo } },
-    { title: "Bill Details", component: BillDetails, props: { billInfo, setBillInfo, onUploadReceipt: handleReceiptUpload, billParticipants, items, settlement } },
-    { title: "Items", component: ItemsSection, props: { items, setItems, billParticipants } },
-    { title: "Settlement", component: SettlementSection, props: { items, billInfo, billParticipants, settlement } }
+    { title: "Participants", component: ParticipantsSection, props: { participants, setParticipants, billInfo, loadingParticipants } },
+    { title: "Bill Details", component: BillDetails, props: { billInfo, setBillInfo, onUploadReceipt: handleReceiptUpload, participants, items, settlement } },
+    { title: "Items", component: ItemsSection, props: { items, setItems, participants } },
+    { title: "Settlement", component: SettlementSection, props: { items, billInfo, participants, settlement } }
   ];
 
   // ---------------------------
@@ -395,10 +432,10 @@ export default function App() {
         <>
           <Box component={Paper} variant="outlined" sx={{ p: 3, mb: 3 }}>
             <ParticipantsSection
-              allParticipants={allParticipants}
-              billParticipants={billParticipants}
-              setBillParticipants={setBillParticipants}
+              participants={participants}
+              setParticipants={setParticipants}
               billInfo={billInfo}
+              loadingParticipants={loadingParticipants}
             />
           </Box>
 
@@ -407,7 +444,7 @@ export default function App() {
               billInfo={billInfo}
               setBillInfo={setBillInfo}
               onUploadReceipt={handleReceiptUpload}
-              billParticipants={billParticipants}
+              participants={participants}
               items={items}
               settlement={settlement}
             />
@@ -417,7 +454,7 @@ export default function App() {
             <ItemsSection
               items={items}
               setItems={setItems}
-              billParticipants={billParticipants}
+              participants={participants}
             />
           </Box>
 
@@ -425,7 +462,7 @@ export default function App() {
             <SettlementSection
               items={items}
               billInfo={billInfo}
-              billParticipants={billParticipants}
+              participants={participants}
               settlement={settlement}
             />
           </Box>

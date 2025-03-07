@@ -45,7 +45,7 @@ const SplitTypeIcon = ({ type }) => {
 
 export default function ItemSplitControl({
   item,
-  billParticipants,
+  participants,
   onSplitTypeChange,
   onToggleEqualParticipant,
   onItemSplitChange,
@@ -175,7 +175,7 @@ export default function ItemSplitControl({
           <Box sx={{ maxHeight: "200px", overflowY: "auto" }}>
             {item.splitType === "equal" ? (
               <FormGroup>
-                {billParticipants.map((p) => {
+                {participants.map((p) => {
                   const isChecked = item.includedParticipants?.includes(p.id) || false;
                   return (
                     <FormControlLabel
@@ -199,7 +199,7 @@ export default function ItemSplitControl({
                   {item.splitType === "unequal-percent" && "Enter percentage for each person"}
                   {item.splitType === "unequal-shares" && "Enter share count for each person"}
                 </Typography>
-                {billParticipants.map((p) => (
+                {participants.map((p) => (
                   <Box key={p.id} sx={{ display: "flex", alignItems: "center", mb: 1 }}>
                     <Typography sx={{ flex: 1 }}>{p.name}</Typography>
                     <TextField
@@ -268,7 +268,7 @@ export default function ItemSplitControl({
           }}
         >
           <FormGroup sx={{ flexDirection: "row" }}>
-            {billParticipants.map((p) => {
+            {participants.map((p) => {
               const isChecked =
                 item.includedParticipants?.includes(p.id) || false;
               return (
@@ -309,7 +309,7 @@ export default function ItemSplitControl({
             overflowY: "auto",
           }}
         >
-          {billParticipants.map((p) => (
+          {participants.map((p) => (
             <Box
               key={p.id}
               sx={{ display: "flex", alignItems: "center" }}

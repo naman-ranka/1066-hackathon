@@ -50,7 +50,7 @@ import {
 
 import ItemSplitControl from "./ItemSplitControl";
 
-export default function ItemsSection({ items, setItems, billParticipants }) {
+export default function ItemsSection({ items, setItems, participants }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [expandedItemId, setExpandedItemId] = useState(null);
@@ -95,7 +95,7 @@ export default function ItemsSection({ items, setItems, billParticipants }) {
       taxRate: 0,
       splitType: "equal",
       splits: {},
-      includedParticipants: billParticipants.map(p => p.id), // Default to all participants
+      includedParticipants: participants.map(p => p.id), // Default to all participants
     };
     
     setItems((prev) => [...prev, newItem]);
@@ -167,7 +167,7 @@ export default function ItemsSection({ items, setItems, billParticipants }) {
               return { 
                 ...item, 
                 splitType: newSplitType,
-                includedParticipants: billParticipants.map(p => p.id)
+                includedParticipants: participants.map(p => p.id)
               };
             }
             
@@ -195,7 +195,7 @@ export default function ItemsSection({ items, setItems, billParticipants }) {
           return {
             ...i,
             splitType: "equal",
-            includedParticipants: billParticipants.map((p) => p.id),
+            includedParticipants: participants.map((p) => p.id),
           };
         }
         return i;
@@ -219,12 +219,12 @@ export default function ItemsSection({ items, setItems, billParticipants }) {
 
   const splitEvenlyInMoney = (item) => {
     const itemTotal = parseFloat(calculateItemTotal(item));
-    const perPersonAmount = billParticipants.length > 0 
-      ? (itemTotal / billParticipants.length).toFixed(2) 
+    const perPersonAmount = participants.length > 0 
+      ? (itemTotal / participants.length).toFixed(2) 
       : "0.00";
       
     const newSplits = {};
-    billParticipants.forEach(p => {
+    participants.forEach(p => {
       newSplits[p.id] = perPersonAmount;
     });
     
@@ -243,12 +243,12 @@ export default function ItemsSection({ items, setItems, billParticipants }) {
   };
 
   const distributeByPercentage = (item) => {
-    const perPersonPercent = billParticipants.length > 0 
-      ? (100 / billParticipants.length).toFixed(2) 
+    const perPersonPercent = participants.length > 0 
+      ? (100 / participants.length).toFixed(2) 
       : "0.00";
       
     const newSplits = {};
-    billParticipants.forEach(p => {
+    participants.forEach(p => {
       newSplits[p.id] = perPersonPercent;
     });
     
@@ -399,7 +399,7 @@ export default function ItemsSection({ items, setItems, billParticipants }) {
                       setItems(prev => prev.map(item => ({
                         ...item,
                         splitType: "equal",
-                        includedParticipants: billParticipants.map(p => p.id)
+                        includedParticipants: participants.map(p => p.id)
                       })));
                     }}
                     sx={{ px: 1 }}
@@ -445,7 +445,7 @@ export default function ItemsSection({ items, setItems, billParticipants }) {
                   <TableCell sx={{ minWidth: '140px' }}>Item</TableCell>
                   <TableCell>Amount</TableCell>
                   <TableCell>Split</TableCell>
-                  {billParticipants.map((participant) => (
+                  {participants.map((participant) => (
                     <TableCell key={participant.id} align="center">
                       <Typography sx={{ fontSize: "0.75rem", fontWeight: 500 }}>
                         {participant.name}
@@ -545,7 +545,7 @@ export default function ItemsSection({ items, setItems, billParticipants }) {
                       </TableCell>
 
                       {/* Participant Cells */}
-                      {billParticipants.map((participant) => (
+                      {participants.map((participant) => (
                         <TableCell key={participant.id} align="center">
                           {renderMatrixCell(item, participant)}
                         </TableCell>
@@ -718,7 +718,7 @@ export default function ItemsSection({ items, setItems, billParticipants }) {
                         
                         <ItemSplitControl
                           item={item}
-                          billParticipants={billParticipants}
+                          participants={participants}
                           onSplitTypeChange={(value) => handleSplitTypeChange(item.id, value)}
                           onToggleEqualParticipant={(participantId) => handleToggleEqualParticipant(item.id, participantId)}
                           onItemSplitChange={(participantId, value) => handleItemSplitChange(item.id, participantId, value)}
@@ -927,7 +927,7 @@ export default function ItemsSection({ items, setItems, billParticipants }) {
                       <TableCell sx={{ width: "120px" }}>
                         <ItemSplitControl
                           item={item}
-                          billParticipants={billParticipants}
+                          participants={participants}
                           onSplitTypeChange={(value) => handleSplitTypeChange(item.id, value)}
                           onToggleEqualParticipant={(participantId) => 
                             handleToggleEqualParticipant(item.id, participantId)}
