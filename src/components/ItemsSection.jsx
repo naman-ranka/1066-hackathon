@@ -46,6 +46,7 @@ import {
   PersonRemove as PersonRemoveIcon,
   SelectAll as SelectAllIcon,
   Cached as CachedIcon,
+  People as PeopleIcon,
 } from "@mui/icons-material";
 
 import ItemSplitControl from "./ItemSplitControl";
@@ -60,18 +61,19 @@ export default function ItemsSection({ items, setItems, participants }) {
   // Utility Functions
   // --------------------------------------
   const calculateItemTotal = (item) => {
-    const subtotal = item.price * item.quantity;
+    // Now just use price directly, not multiplied by quantity
+    const subtotal = item.price;
     const taxAmount = (subtotal * item.taxRate) / 100;
     return (subtotal + taxAmount).toFixed(2);
   };
 
   const calculateBillSubtotal = () => {
-    return items.reduce((acc, i) => acc + i.price * i.quantity, 0).toFixed(2);
+    return items.reduce((acc, i) => acc + i.price, 0).toFixed(2);
   };
 
   const calculateBillTax = () => {
     return items
-      .reduce((acc, i) => acc + (i.price * i.quantity * i.taxRate) / 100, 0)
+      .reduce((acc, i) => acc + (i.price * i.taxRate) / 100, 0)
       .toFixed(2);
   };
 
@@ -266,24 +268,220 @@ export default function ItemsSection({ items, setItems, participants }) {
     );
   };
 
-  // --------------------------------------
-  // Matrix View Functions
-  // --------------------------------------
+  const distributeByShares = (item) => {
+    const perPersonShares = participants.length > 0 
+      ? "1" 
+      : "0";
+      
+    const newSplits = {};
+    participants.forEach(p => {
+      newSplits[p.id] = perPersonShares;
+    });
+    
+    setItems((prev) =>
+      prev.map((i) => {
+        if (i.id === item.id) {
+          return {
+            ...i,
+            splitType: "unequal-shares",
+            splits: newSplits
+          };
+        }
+        return i;
+      })
+    );
+  };
+
+  // Add these new quick action functions near other utility functions
+  const renderQuickActionButtons = (item) => {
+    // Different quick actions based on split type
+    if (item.splitType === "equal") {
+      return (
+        <ButtonGroup size="small" variant="outlined" sx={{ '& .MuiButton-root': { minWidth: '28px', px: 0.5 } }}>
+          <Tooltip title="Select All">
+            <Button onClick={() => markAllEqual(item)}>
+              <SelectAllIcon sx={{ fontSize: "0.7rem" }} />
+            </Button>
+          </Tooltip>
+          <Tooltip title="Exclude All">
+            <Button onClick={() => excludeAllFromItem(item)}>
+              <PersonRemoveIcon sx={{ fontSize: "0.7rem" }} />
+            </Button>
+          </Tooltip>
+        </ButtonGroup>
+      );
+    } else if (item.splitType === "unequal-money") {
+      return (
+        <ButtonGroup size="small" variant="outlined" sx={{ '& .MuiButton-root': { minWidth: '28px', px: 0.5 } }}>
+          <Tooltip title="Split Evenly">
+            <Button onClick={() => splitEvenlyInMoney(item)}>
+              <MonetizationOnIcon sx={{ fontSize: "0.7rem" }} />
+            </Button>
+          </Tooltip>
+          <Tooltip title="First Person Pays">
+            <Button onClick={() => {
+              const totalAmount = parseFloat(calculateItemTotal(item));
+              const newSplits = {};
+              participants.forEach((p, index) => {
+                newSplits[p.id] = index === 0 ? totalAmount.toFixed(2) : "0.00";
+              });
+              setItems(prev => prev.map(i => 
+                i.id === item.id ? { ...i, splits: newSplits } : i
+              ));
+            }}>
+              1P
+            </Button>
+          </Tooltip>
+          <Tooltip title="Clear All">
+            <Button onClick={() => {
+              const newSplits = {};
+              participants.forEach(p => {
+                newSplits[p.id] = "";
+              });
+              setItems(prev => prev.map(i => 
+                i.id === item.id ? { ...i, splits: newSplits } : i
+              ));
+            }}>
+              0
+            </Button>
+          </Tooltip>
+        </ButtonGroup>
+      );
+    } else if (item.splitType === "unequal-percent") {
+      return (
+        <ButtonGroup size="small" variant="outlined" sx={{ '& .MuiButton-root': { minWidth: '28px', px: 0.5 } }}>
+          <Tooltip title="Split Evenly">
+            <Button onClick={() => distributeByPercentage(item)}>
+              %
+            </Button>
+          </Tooltip>
+          <Tooltip title="100% First Person">
+            <Button onClick={() => {
+              const newSplits = {};
+              participants.forEach((p, index) => {
+                newSplits[p.id] = index === 0 ? "100" : "0";
+              });
+              setItems(prev => prev.map(i => 
+                i.id === item.id ? { ...i, splits: newSplits } : i
+              ));
+            }}>
+              1P
+            </Button>
+          </Tooltip>
+          <Tooltip title="Clear All">
+            <Button onClick={() => {
+              const newSplits = {};
+              participants.forEach(p => {
+                newSplits[p.id] = "";
+              });
+              setItems(prev => prev.map(i => 
+                i.id === item.id ? { ...i, splits: newSplits } : i
+              ));
+            }}>
+              0
+            </Button>
+          </Tooltip>
+        </ButtonGroup>
+      );
+    } else if (item.splitType === "unequal-shares") {
+      return (
+        <ButtonGroup size="small" variant="outlined" sx={{ '& .MuiButton-root': { minWidth: '28px', px: 0.5 } }}>
+          <Tooltip title="Split Evenly">
+            <Button onClick={() => distributeByShares(item)}>
+              <PeopleIcon sx={{ fontSize: "0.7rem" }} />
+            </Button>
+          </Tooltip>
+          <Tooltip title="First Person Only">
+            <Button onClick={() => {
+              const newSplits = {};
+              participants.forEach((p, index) => {
+                newSplits[p.id] = index === 0 ? "1" : "0";
+              });
+              setItems(prev => prev.map(i => 
+                i.id === item.id ? { ...i, splits: newSplits } : i
+              ));
+            }}>
+              1P
+            </Button>
+          </Tooltip>
+          <Tooltip title="Clear All">
+            <Button onClick={() => {
+              const newSplits = {};
+              participants.forEach(p => {
+                newSplits[p.id] = "";
+              });
+              setItems(prev => prev.map(i => 
+                i.id === item.id ? { ...i, splits: newSplits } : i
+              ));
+            }}>
+              0
+            </Button>
+          </Tooltip>
+        </ButtonGroup>
+      );
+    }
+    return null;
+  };
+
+  // Update the matrix view split type chips to be buttons
+  const renderSplitTypeButtons = (item) => {
+    return (
+      <ButtonGroup size="small" variant="outlined">
+        <Tooltip title="Equal Split">
+          <Button
+            onClick={() => handleSplitTypeChange(item.id, "equal")}
+            variant={item.splitType === "equal" ? "contained" : "outlined"}
+            sx={{ minWidth: '32px', px: 0.5 }}
+          >
+            <SelectAllIcon sx={{ fontSize: "0.7rem" }} />
+          </Button>
+        </Tooltip>
+        <Tooltip title="Split by Amount">
+          <Button
+            onClick={() => handleSplitTypeChange(item.id, "unequal-money")}
+            variant={item.splitType === "unequal-money" ? "contained" : "outlined"}
+            sx={{ minWidth: '32px', px: 0.5 }}
+          >
+            <MonetizationOnIcon sx={{ fontSize: "0.7rem" }} />
+          </Button>
+        </Tooltip>
+        <Tooltip title="Split by Percentage">
+          <Button
+            onClick={() => handleSplitTypeChange(item.id, "unequal-percent")}
+            variant={item.splitType === "unequal-percent" ? "contained" : "outlined"}
+            sx={{ minWidth: '32px', px: 0.5 }}
+          >
+            %
+          </Button>
+        </Tooltip>
+        <Tooltip title="Split by Parts">
+          <Button
+            onClick={() => handleSplitTypeChange(item.id, "unequal-shares")}
+            variant={item.splitType === "unequal-shares" ? "contained" : "outlined"}
+            sx={{ minWidth: '32px', px: 0.5 }}
+          >
+            <PeopleIcon sx={{ fontSize: "0.7rem" }} />
+          </Button>
+        </Tooltip>
+      </ButtonGroup>
+    );
+  };
+
+  // Update the matrix view cell to include quick actions
   const renderMatrixCell = (item, participant) => {
     if (item.splitType === "equal") {
-      // For equal splits, render a checkbox
       const isIncluded = (item.includedParticipants || []).includes(participant.id);
-      
       return (
-        <Checkbox 
-          checked={isIncluded}
-          onChange={() => handleToggleEqualParticipant(item.id, participant.id)}
-          size="small"
-          sx={{ padding: '4px' }}
-        />
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Checkbox 
+            checked={isIncluded}
+            onChange={() => handleToggleEqualParticipant(item.id, participant.id)}
+            size="small"
+            sx={{ padding: '4px' }}
+          />
+        </Box>
       );
     } else {
-      // For unequal splits, render an input field
       return (
         <TextField
           type="number"
@@ -310,44 +508,7 @@ export default function ItemsSection({ items, setItems, participants }) {
     }
   };
 
-  const renderMatrixSplitTypeChip = (item) => {
-    let label, color;
-    
-    switch (item.splitType) {
-      case "equal":
-        label = "Equal";
-        color = "primary";
-        break;
-      case "unequal-money":
-        label = "$";
-        color = "success";
-        break;
-      case "unequal-percent":
-        label = "%";
-        color = "warning";
-        break;
-      case "unequal-shares":
-        label = "Parts";
-        color = "info";
-        break;
-      default:
-        label = "Split";
-        color = "default";
-    }
-    
-    return (
-      <Chip
-        label={label}
-        size="small"
-        color={color}
-        sx={{ fontSize: "0.7rem", height: '20px', mr: 0.5 }}
-      />
-    );
-  };
-
-  // --------------------------------------
-  // Matrix View Render
-  // --------------------------------------
+  // Update the matrix view to include the new buttons
   const renderMatrixView = () => {
     if (items.length === 0) {
       return (
@@ -496,51 +657,8 @@ export default function ItemsSection({ items, setItems, participants }) {
                       {/* Split Type */}
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', flexDirection: 'column', gap: 0.5 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                            {renderMatrixSplitTypeChip(item)}
-                            <Select
-                              value={item.splitType}
-                              onChange={(e) => handleSplitTypeChange(item.id, e.target.value)}
-                              size="small"
-                              sx={{
-                                height: '24px',
-                                fontSize: '0.75rem',
-                                flex: 1,
-                                '& .MuiSelect-select': {
-                                  padding: '2px 4px',
-                                }
-                              }}
-                            >
-                              <MenuItem value="equal" sx={{ fontSize: '0.75rem' }}>Equal</MenuItem>
-                              <MenuItem value="unequal-money" sx={{ fontSize: '0.75rem' }}>$</MenuItem>
-                              <MenuItem value="unequal-percent" sx={{ fontSize: '0.75rem' }}>%</MenuItem>
-                              <MenuItem value="unequal-shares" sx={{ fontSize: '0.75rem' }}>Parts</MenuItem>
-                            </Select>
-                          </Box>
-                          
-                          {/* Quick Actions */}
-                          <ButtonGroup size="small" variant="text" sx={{ '& .MuiButton-root': { minWidth: '24px', px: 0.5 } }}>
-                            <Tooltip title="Split equally among all">
-                              <Button onClick={() => markAllEqual(item)}>
-                                <SelectAllIcon sx={{ fontSize: "0.7rem" }} />
-                              </Button>
-                            </Tooltip>
-                            <Tooltip title="Exclude all">
-                              <Button onClick={() => excludeAllFromItem(item)}>
-                                <PersonRemoveIcon sx={{ fontSize: "0.7rem" }} />
-                              </Button>
-                            </Tooltip>
-                            <Tooltip title="Split evenly in money">
-                              <Button onClick={() => splitEvenlyInMoney(item)}>
-                                <MonetizationOnIcon sx={{ fontSize: "0.7rem" }} />
-                              </Button>
-                            </Tooltip>
-                            <Tooltip title="Split by percentage">
-                              <Button onClick={() => distributeByPercentage(item)}>
-                                %
-                              </Button>
-                            </Tooltip>
-                          </ButtonGroup>
+                          {renderSplitTypeButtons(item)}
+                          {renderQuickActionButtons(item)}
                         </Box>
                       </TableCell>
 
@@ -670,21 +788,9 @@ export default function ItemsSection({ items, setItems, participants }) {
                   <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                     <Box sx={{ mt: 2 }}>
                       <Grid container spacing={2}>
-                        <Grid item xs={6} md={3}>
+                        <Grid item xs={12} md={4}>
                           <TextField
-                            label="Quantity"
-                            type="number"
-                            size="small"
-                            fullWidth
-                            value={item.quantity}
-                            onChange={(e) => handleItemChange(item.id, "quantity", parseFloat(e.target.value) || 0)}
-                            inputProps={{ min: 1, step: "1" }}
-                          />
-                        </Grid>
-                        
-                        <Grid item xs={6} md={3}>
-                          <TextField
-                            label="Price/Unit"
+                            label="Price"
                             type="number"
                             size="small"
                             fullWidth
@@ -696,7 +802,19 @@ export default function ItemsSection({ items, setItems, participants }) {
                           />
                         </Grid>
                         
-                        <Grid item xs={12} md={3}>
+                        <Grid item xs={6} md={4}>
+                          <TextField
+                            label="Quantity (for reference)"
+                            type="number"
+                            size="small"
+                            fullWidth
+                            value={item.quantity}
+                            onChange={(e) => handleItemChange(item.id, "quantity", parseFloat(e.target.value) || 0)}
+                            inputProps={{ min: 1, step: "1" }}
+                          />
+                        </Grid>
+                        
+                        <Grid item xs={6} md={4}>
                           <TextField
                             label="Tax %"
                             type="number"
@@ -799,8 +917,8 @@ export default function ItemsSection({ items, setItems, participants }) {
               <TableHead>
                 <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
                   <TableCell>Item Name</TableCell>
+                  <TableCell>Price</TableCell>
                   <TableCell>Qty</TableCell>
-                  <TableCell>Price/Unit</TableCell>
                   <TableCell>Tax %</TableCell>
                   <TableCell>Split</TableCell>
                   <TableCell>Total</TableCell>
@@ -839,6 +957,36 @@ export default function ItemsSection({ items, setItems, participants }) {
                         />
                       </TableCell>
 
+                      {/* Price */}
+                      <TableCell>
+                        <TextField
+                          type="number"
+                          size="small"
+                          value={item.price}
+                          onChange={(e) =>
+                            handleItemChange(
+                              item.id,
+                              "price",
+                              parseFloat(e.target.value)
+                            )
+                          }
+                          InputProps={{
+                            startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                          }}
+                          sx={{
+                            width: "80px",
+                            "& .MuiInputBase-input": {
+                              fontSize: "0.75rem",
+                              padding: "2px 4px",
+                              height: "1.2rem",
+                            },
+                            "& .MuiOutlinedInput-root": {
+                              height: "24px",
+                            },
+                          }}
+                        />
+                      </TableCell>
+
                       {/* Quantity */}
                       <TableCell>
                         <TextField
@@ -862,33 +1010,6 @@ export default function ItemsSection({ items, setItems, participants }) {
                           }
                           sx={{
                             width: "60px",
-                            "& .MuiOutlinedInput-root": {
-                              height: "24px",
-                            },
-                          }}
-                        />
-                      </TableCell>
-
-                      {/* Price */}
-                      <TableCell>
-                        <TextField
-                          type="number"
-                          size="small"
-                          value={item.price}
-                          onChange={(e) =>
-                            handleItemChange(
-                              item.id,
-                              "price",
-                              parseFloat(e.target.value)
-                            )
-                          }
-                          sx={{
-                            width: "80px",
-                            "& .MuiInputBase-input": {
-                              fontSize: "0.75rem",
-                              padding: "2px 4px",
-                              height: "1.2rem",
-                            },
                             "& .MuiOutlinedInput-root": {
                               height: "24px",
                             },

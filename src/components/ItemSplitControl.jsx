@@ -87,7 +87,7 @@ export default function ItemSplitControl({
       case "equal": return "Equal";
       case "unequal-money": return "Money";
       case "unequal-percent": return "Percent";
-      case "unequal-shares": return "Shares";
+      case "unequal-shares": return "Parts";
       default: return "Split";
     }
   };
