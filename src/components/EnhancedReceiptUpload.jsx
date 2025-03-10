@@ -38,7 +38,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import { processMultipleReceiptImages } from '../utils/imageProcessor';
+import { processBillImages } from '../utils/imageProcessor';
 
 /**
  * Enhanced Receipt Upload Component with multi-phase approach:
@@ -56,6 +56,7 @@ export default function EnhancedReceiptUpload({ onProcessComplete }) {
   
   // Upload settings
   const [useLLM, setUseLLM] = useState(true);
+
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [previewUrls, setPreviewUrls] = useState([]);
   const [adjustedImages, setAdjustedImages] = useState([]);
@@ -241,12 +242,13 @@ export default function EnhancedReceiptUpload({ onProcessComplete }) {
     
     try {
       // TODO: In a real implementation, we would apply the brightness/contrast
-      // adjustments to the images before sending them to the backend.
+      // adjustments to the images before sending them to the backend.// For now, we'll just log the adjustments and send the original files.
+
       // For now, we'll just log the adjustments and send the original files.
       console.log("Image adjustments:", adjustedImages);
       
-      // Use the processMultipleReceiptImages function from imageProcessor.js
-      const data = await processMultipleReceiptImages(selectedFiles, useLLM);
+      // Use the processBillImages function which uses Google Cloud Vision by default
+      const data = await processBillImages(selectedFiles);
       
       // Store the processed data for review
       setProcessedData(data);
@@ -255,7 +257,7 @@ export default function EnhancedReceiptUpload({ onProcessComplete }) {
       setActiveStep(2);
       
     } catch (error) {
-      console.error("Error processing receipt images:", error);
+      console.error("Error processing bill images:", error);
       setError(`Error: ${error.message}`);
     } finally {
       setIsLoading(false);
@@ -389,8 +391,8 @@ export default function EnhancedReceiptUpload({ onProcessComplete }) {
         );
         
       case 1: // Adjust & Process
-        return (
-          <>
+        return (         
+    <>
             {/* Processing Options */}
             <Box sx={{ mb: 3 }}>
               <FormControlLabel

@@ -76,3 +76,41 @@ export async function processMultipleReceiptImages(imageFiles, useLLM = true) {
     throw error;
   }
 }
+
+/**
+ * Process bill images using Google Cloud Vision API
+ * @param {File[]} imageFiles Array of image files
+ * @returns {Promise<object>} Structured bill data
+ */
+export async function processBillImages(imageFiles) {
+  try {
+    console.log('Starting bill image processing with Google Cloud...');
+    
+    // Create form data to send the files
+    const formData = new FormData();
+    
+    // Append all files with 'files[]' field name
+    imageFiles.forEach(file => {
+      formData.append('files[]', file);
+    });
+    
+    // Add provider to form data instead of URL parameter
+    formData.append('provider', 'google_cloud');
+    
+    // Send request to backend
+    const response = await fetch(`${API_URL}/process-bill-images/`, {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error in processBillImages:', error);
+    throw error;
+  }
+}
