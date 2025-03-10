@@ -20,7 +20,7 @@ export async function saveBill(billInfo, items, participants) {
     console.log("Final JSON Payload:", JSON.stringify(payload, null, 2));
 
     // Send as raw object (Axios will handle JSON conversion)
-    const response = await axios.post(`${API_URL}/new/save-bill/`, payload, {
+    const response = await axios.post(`${API_URL}/new/save/`, payload, {
       headers: {
         'Content-Type': 'application/json'
       }

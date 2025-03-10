@@ -39,6 +39,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { processBillImages } from '../utils/imageProcessor';
+import { handleJsonBillUpload } from '../utils/billLoader';
 
 /**
  * Enhanced Receipt Upload Component with multi-phase approach:
@@ -242,19 +243,16 @@ export default function EnhancedReceiptUpload({ onProcessComplete }) {
     
     try {
       // TODO: In a real implementation, we would apply the brightness/contrast
-      // adjustments to the images before sending them to the backend.// For now, we'll just log the adjustments and send the original files.
-
-      // For now, we'll just log the adjustments and send the original files.
+      // adjustments to the images before sending them to the backend.
       console.log("Image adjustments:", adjustedImages);
       
       // Use the processBillImages function which uses Google Cloud Vision by default
-      const data = await processBillImages(selectedFiles);
-      
-      // Store the processed data for review
-      setProcessedData(data);
-      
+      const jsonData = await processBillImages(selectedFiles);
+
       // Move to the review step
       setActiveStep(2);
+      // Store the processed data for review
+      setProcessedData(jsonData);
       
     } catch (error) {
       console.error("Error processing bill images:", error);
@@ -263,7 +261,7 @@ export default function EnhancedReceiptUpload({ onProcessComplete }) {
       setIsLoading(false);
     }
   };
-  
+
   // Handle navigation between steps
   const handleNext = () => {
     setActiveStep((prevStep) => prevStep + 1);
@@ -282,7 +280,9 @@ export default function EnhancedReceiptUpload({ onProcessComplete }) {
     setOpen(false);
     
     // Call the callback with the processed data
-    onProcessComplete(processedData);
+    if (processedData) {
+      onProcessComplete(processedData);
+    }
     
     // Reset the state
     resetState();

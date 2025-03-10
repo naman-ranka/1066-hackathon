@@ -1,79 +1,72 @@
-// ParticipantsSection.jsx
-import React from "react";
+import React from 'react';
 import {
   Box,
   Typography,
-  Button,
-  Table,
-  TableBody,
-  TableHead,
-  TableRow,
-  TableCell,
+  Card,
+  CardContent,
+  Paper,
   CircularProgress,
-  Alert
-} from "@mui/material";
+  Avatar,
+  Grid
+} from '@mui/material';
 
-export default function ParticipantsSection({
-  participants,
-  setParticipants,
-  billInfo,
-  loadingParticipants = false
+// Simple read-only participant card
+const ParticipantCard = React.memo(({ participant }) => (
+  <Card variant="outlined" sx={{ mb: 1 }}>
+    <CardContent sx={{ py: 1, "&:last-child": { pb: 1 } }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <Avatar sx={{ width: 24, height: 24, fontSize: '0.8rem', bgcolor: 'primary.main' }}>
+          {participant.name[0].toUpperCase()}
+        </Avatar>
+        <Typography variant="body1">{participant.name}</Typography>
+      </Box>
+    </CardContent>
+  </Card>
+));
+
+// Main component wrapped in React.memo for performance
+export default React.memo(function ParticipantsSection({ 
+  participants, 
+  loadingParticipants 
 }) {
-  // Helper function to get amount paid by a participant
-  const getAmountPaid = (participantId) => {
-    if (!billInfo?.payers) return 0;
-    const payer = billInfo.payers.find(p => p.participantId === participantId);
-    return payer ? payer.amount : 0;
-  };
+  // Memoize the participant list to prevent unnecessary re-renders
+  const participantList = React.useMemo(() => (
+    <Grid container spacing={1}>
+      {participants.map(participant => (
+        <Grid item xs={12} sm={6} md={4} key={participant.id}>
+          <ParticipantCard participant={participant} />
+        </Grid>
+      ))}
+    </Grid>
+  ), [participants]);
 
   return (
-    <Box>
-      <Typography variant="h6" gutterBottom>
-        Bill Participants
+    <Box sx={{ mb: 3 }}>
+      <Typography variant="subtitle1" sx={{ fontSize: "0.9rem", fontWeight: 500, mb: 1 }}>
+        1. Group Participants
       </Typography>
 
       {loadingParticipants ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
-          <CircularProgress size={30} />
-        </Box>
-      ) : participants.length > 0 ? (
-        <Table sx={{ mt: 1 }}>
-          <TableHead>
-            <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Amount Paid</TableCell>
-              <TableCell>Amount Owed</TableCell>
-              <TableCell>Net Balance</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {participants.map((p) => {
-              const amountPaid = getAmountPaid(p.id);
-              const netBalance = amountPaid - p.amountOwed;
-              return (
-                <TableRow key={p.id}>
-                  <TableCell>{p.name}</TableCell>
-                  <TableCell>{p.email || '-'}</TableCell>
-                  <TableCell>${amountPaid.toFixed(2)}</TableCell>
-                  <TableCell>${p.amountOwed.toFixed(2)}</TableCell>
-                  <TableCell>
-                    <Typography
-                      color={netBalance > 0 ? "success.main" : netBalance < 0 ? "error.main" : "text.primary"}
-                    >
-                      ${netBalance.toFixed(2)}
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+        <CircularProgress size={20} sx={{ display: "block", margin: "20px auto" }} />
+      ) : participants.length === 0 ? (
+        <Paper
+          variant="outlined"
+          sx={{
+            p: 3,
+            textAlign: "center",
+            borderStyle: "dashed",
+            borderWidth: "1px",
+            borderColor: "grey.400",
+            backgroundColor: "grey.50"
+          }}
+        >
+          <Typography color="text.secondary">
+            No participants in this group yet
+          </Typography>
+        </Paper>
       ) : (
-        <Alert severity="info" sx={{ my: 2 }}>
-          No participants available. Please make sure your group is set up correctly.
-        </Alert>
+        participantList
       )}
     </Box>
   );
-}
+});

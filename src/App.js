@@ -12,6 +12,7 @@ import BillDetails from "./components/BillDetails";
 import ItemsSection from "./components/ItemsSection";
 import ParticipantsSection from "./components/ParticipantsSection";
 import SettlementSection from "./components/SettlementSection";
+import { handleJsonBillUpload } from "./utils/billLoader";
 
 // MUI imports
 import { Container, Typography, Paper, Box, Button, useMediaQuery, useTheme, Fab, Drawer, List, ListItem, ListItemText, Divider } from "@mui/material";
@@ -68,8 +69,75 @@ export default function App() {
   // Effects
   // ---------------------------
   useEffect(() => {
-    recalculateBill();
-    // eslint-disable-next-line
+    // Debounce expensive calculations
+    const debounceTimer = setTimeout(() => {
+      // Only recalculate participant shares, not the total amount
+      const updatedParticipants = participants.map((p) => ({ 
+        ...p, 
+        amountOwed: 0 
+      }));
+
+      // Distribute costs per item using a more efficient approach
+      const itemShares = new Map(); // Cache item shares
+      
+      items.forEach((item) => {
+        const itemTotal = calculateItemTotal(item);
+
+        switch (item.splitType) {
+          case "equal": {
+            const relevantIds = item.includedParticipants?.length
+              ? item.includedParticipants
+              : updatedParticipants.map((p) => p.id);
+            const share = itemTotal / (relevantIds.length || 1);
+            relevantIds.forEach(pid => {
+              itemShares.set(pid, (itemShares.get(pid) || 0) + share);
+            });
+            break;
+          }
+          case "unequal-money": {
+            Object.entries(item.splits).forEach(([pid, amt]) => {
+              itemShares.set(Number(pid), (itemShares.get(Number(pid)) || 0) + (parseFloat(amt) || 0));
+            });
+            break;
+          }
+          case "unequal-percent": {
+            const sumOfPercent = Object.values(item.splits).reduce((acc, val) => acc + (parseFloat(val) || 0), 0);
+            if (sumOfPercent > 0) {
+              Object.entries(item.splits).forEach(([pid, percent]) => {
+                const amount = itemTotal * ((parseFloat(percent) || 0) / sumOfPercent);
+                itemShares.set(Number(pid), (itemShares.get(Number(pid)) || 0) + amount);
+              });
+            }
+            break;
+          }
+          case "unequal-shares": {
+            const totalShares = Object.values(item.splits).reduce((acc, val) => acc + (parseFloat(val) || 0), 0);
+            if (totalShares > 0) {
+              Object.entries(item.splits).forEach(([pid, shares]) => {
+                const amount = itemTotal * ((parseFloat(shares) || 0) / totalShares);
+                itemShares.set(Number(pid), (itemShares.get(Number(pid)) || 0) + amount);
+              });
+            }
+            break;
+          }
+        }
+      });
+
+      // Update participant amounts in one pass
+      updatedParticipants.forEach(p => {
+        p.amountOwed = Number((itemShares.get(p.id) || 0).toFixed(2));
+      });
+
+      // Calculate settlement only if needed
+      if (updatedParticipants.some(p => p.amountOwed > 0)) {
+        const minimalTxns = calculateSettlement(updatedParticipants);
+        setSettlement(minimalTxns);
+      }
+
+      setParticipants(updatedParticipants);
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(debounceTimer);
   }, [items, participants]);
 
   // Fetch participants
@@ -78,10 +146,7 @@ export default function App() {
       setLoadingParticipants(true);
       try {
         const fetchedParticipants = await fetchGroupParticipants();
-        setParticipants(fetchedParticipants.map(p => ({
-          ...p,
-          amountOwed: 0
-        })));
+        setParticipants(fetchedParticipants);
         setLoadingParticipants(false);
       } catch (error) {
         console.error("Error fetching participants:", error);
@@ -115,11 +180,11 @@ export default function App() {
   // ---------------------------
   // Calculation
   // ---------------------------
-  const calculateItemTotal = (item) => {
+  const calculateItemTotal = React.useCallback((item) => {
     const subtotal = Number((item.price * item.quantity).toFixed(2));
     const taxAmount = Number(((subtotal * item.taxRate) / 100).toFixed(2));
     return Number((subtotal + taxAmount).toFixed(2));
-  };
+  }, []);
 
   const recalculateBill = () => {
     let total = 0;
@@ -210,31 +275,14 @@ export default function App() {
       reader.onload = (e) => {
         try {
           const jsonData = JSON.parse(e.target.result);
-          const parsedData = loadBillFromJson(jsonData);
+          const result = handleJsonBillUpload(jsonData, {
+            setBillInfo,
+            setItems,
+            setParticipants
+          });
           
-          if (parsedData.isValid) {
-            setBillInfo(parsedData.billInfo);
-            setItems(parsedData.items);
-            // Merge loaded participants with existing participants
-            if (parsedData.participants && parsedData.participants.length > 0) {
-              setParticipants(prev => {
-                // Create a map of existing participants by ID
-                const existingMap = new Map(prev.map(p => [p.id, p]));
-                
-                // Update or add participants from the JSON
-                parsedData.participants.forEach(p => {
-                  if (existingMap.has(p.id)) {
-                    existingMap.set(p.id, { ...existingMap.get(p.id), ...p });
-                  } else {
-                    existingMap.set(p.id, p);
-                  }
-                });
-                
-                return Array.from(existingMap.values());
-              });
-            }
-          } else {
-            alert("Error loading JSON: " + parsedData.error);
+          if (!result.success) {
+            alert("Error loading JSON: " + result.error);
           }
         } catch (error) {
           alert("Invalid JSON file: " + error.message);
@@ -244,42 +292,46 @@ export default function App() {
     }
   };
 
-  const handleReceiptUpload = async (file) => {
+  const handleReceiptUpload = async (fileOrData) => {
     try {
-      // Process the image and get JSON response
-      const jsonData = await processReceiptImage(file);
+      let jsonData;
+      
+      if (fileOrData instanceof File) {
+        // If it's a file, process it
+        jsonData = await processReceiptImage(fileOrData);
+      } else {
+        // If it's already processed data, use it directly
+        jsonData = fileOrData;
+      }
       
       // Use existing billLoader to parse the data
       const parsedData = loadBillFromJson(jsonData);
       
       if (parsedData.isValid) {
-        setBillInfo(parsedData.billInfo);
-        setItems(parsedData.items);
-        // Update with any new participants
-        if (parsedData.participants && parsedData.participants.length > 0) {
-          setParticipants(prev => {
-            const existingMap = new Map(prev.map(p => [p.id, p]));
-            parsedData.participants.forEach(p => {
-              if (existingMap.has(p.id)) {
-                existingMap.set(p.id, { ...existingMap.get(p.id), ...p });
-              } else {
-                existingMap.set(p.id, p);
-              }
-            });
-            return Array.from(existingMap.values());
-          });
+        // Update bill info
+        setBillInfo(prev => ({
+          ...prev,
+          ...parsedData.billInfo
+        }));
+        
+        // Update items if present
+        if (parsedData.items && parsedData.items.length > 0) {
+          setItems(parsedData.items);
         }
+
+        // Note: We don't update participants as they come from the group
       } else {
         alert("Error processing receipt: " + parsedData.error);
       }
     } catch (error) {
       console.error('Failed to process receipt:', error);
+      alert("Error processing receipt: " + error.message);
     }
   };
 
   // Define section components for mobile navigation
   const sections = [
-    { title: "Participants", component: ParticipantsSection, props: { participants, setParticipants, billInfo, loadingParticipants } },
+    { title: "Participants", component: ParticipantsSection, props: { participants, loadingParticipants } },
     { title: "Bill Details", component: BillDetails, props: { billInfo, setBillInfo, onUploadReceipt: handleReceiptUpload, participants, items, settlement } },
     { title: "Items", component: ItemsSection, props: { items, setItems, participants } },
     { title: "Settlement", component: SettlementSection, props: { items, billInfo, participants, settlement } }
@@ -433,8 +485,6 @@ export default function App() {
           <Box component={Paper} variant="outlined" sx={{ p: 3, mb: 3 }}>
             <ParticipantsSection
               participants={participants}
-              setParticipants={setParticipants}
-              billInfo={billInfo}
               loadingParticipants={loadingParticipants}
             />
           </Box>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { 
   Box, 
   Typography, 
@@ -67,14 +67,13 @@ export default function SettlementSection({ items, billInfo, participants, settl
   const [paymentMethod, setPaymentMethod] = useState('venmo');
   const [paymentDetails, setPaymentDetails] = useState('');
   
-  // Helper to get a participant's total contribution
-  const getParticipantTotal = (participantId) => {
+  // Memoize expensive calculations and functions
+  const getParticipantTotal = useCallback((participantId) => {
     const payer = billInfo.payers?.find(p => p.participantId === participantId);
     return payer ? payer.amount : 0;
-  };
+  }, [billInfo.payers]);
   
-  // Helper to get a color for a participant (deterministic based on name)
-  const getParticipantColor = (name) => {
+  const getParticipantColor = useCallback((name) => {
     const colors = [
       theme.palette.primary.main,
       theme.palette.secondary.main,
@@ -87,12 +86,150 @@ export default function SettlementSection({ items, billInfo, participants, settl
     // Simple hash function for the name
     const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return colors[hash % colors.length];
-  };
-  
+  }, [theme]);
+
   // Get initials for avatar
   const getInitials = (name) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
+
+  // Memoize participants summary calculations
+  const participantSummaries = useMemo(() => {
+    return participants.map(participant => {
+      const amountPaid = getParticipantTotal(participant.id);
+      const netBalance = amountPaid - participant.amountOwed;
+      const status = netBalance > 0 ? 'creditor' : netBalance < 0 ? 'debtor' : 'settled';
+      
+      return {
+        ...participant,
+        amountPaid,
+        netBalance,
+        status,
+        color: getParticipantColor(participant.name)
+      };
+    });
+  }, [participants, getParticipantTotal, getParticipantColor]);
+
+  // Memoize settlement transactions
+  const settlementCards = useMemo(() => (
+    settlement.map((txn, i) => (
+      <Grid item xs={12} sm={6} key={i}>
+        <Card 
+          variant="outlined"
+          sx={{
+            boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+            transition: 'transform 0.2s',
+            '&:hover': {
+              transform: 'translateY(-3px)',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+            }
+          }}
+        >
+          <CardContent sx={{ p: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Avatar 
+                  sx={{ 
+                    bgcolor: getParticipantColor(txn.from),
+                    width: 40,
+                    height: 40
+                  }}
+                >
+                  {getInitials(txn.from)}
+                </Avatar>
+                
+                <Box>
+                  <Typography variant="body2" fontWeight="medium">
+                    {txn.from}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Pays
+                  </Typography>
+                </Box>
+              </Box>
+              
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <Chip 
+                  label={`$${txn.amount}`} 
+                  color="primary" 
+                  size="small"
+                  sx={{ fontWeight: 'bold', mb: 0.5 }}
+                />
+                <ArrowForwardIcon color="action" fontSize="small" />
+              </Box>
+              
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Box sx={{ textAlign: 'right' }}>
+                  <Typography variant="body2" fontWeight="medium">
+                    {txn.to}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Receives
+                  </Typography>
+                </Box>
+                
+                <Avatar 
+                  sx={{ 
+                    bgcolor: getParticipantColor(txn.to),
+                    width: 40,
+                    height: 40
+                  }}
+                >
+                  {getInitials(txn.to)}
+                </Avatar>
+              </Box>
+            </Box>
+            
+            {/* Payment Button */}
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1.5 }}>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<QrCode2Icon />}
+                onClick={() => handleOpenPaymentDialog(txn)}
+              >
+                Generate Payment QR
+              </Button>
+            </Box>
+          </CardContent>
+        </Card>
+      </Grid>
+    ))
+  ), [settlement, getParticipantColor]);
+
+  // Memoize summary grid items
+  const participantSummaryItems = useMemo(() => (
+    participantSummaries.map(summary => (
+      <Grid item xs={12} key={summary.id}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Avatar
+              sx={{ 
+                width: 24, 
+                height: 24, 
+                fontSize: '0.75rem',
+                bgcolor: summary.color
+              }}
+            >
+              {getInitials(summary.name)}
+            </Avatar>
+            <Typography variant="body2">{summary.name}</Typography>
+          </Box>
+          
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              color: summary.status === 'creditor' ? 'success.main' : 
+                     summary.status === 'debtor' ? 'error.main' : 'text.primary',
+              fontWeight: 500
+            }}
+          >
+            {summary.netBalance > 0 ? '+' : ''}{summary.netBalance.toFixed(2)}
+          </Typography>
+        </Box>
+      </Grid>
+    ))
+  ), [participantSummaries]);
 
   // Open payment dialog for a transaction
   const handleOpenPaymentDialog = (transaction) => {
@@ -192,89 +329,7 @@ export default function SettlementSection({ items, billInfo, participants, settl
       ) : (
         <Box sx={{ mb: 2 }}>
           <Grid container spacing={2}>
-            {settlement.map((txn, i) => (
-              <Grid item xs={12} sm={6} key={i}>
-                <Card 
-                  variant="outlined"
-                  sx={{
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-                    transition: 'transform 0.2s',
-                    '&:hover': {
-                      transform: 'translateY(-3px)',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                    }
-                  }}
-                >
-                  <CardContent sx={{ p: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Avatar 
-                          sx={{ 
-                            bgcolor: getParticipantColor(txn.from),
-                            width: 40,
-                            height: 40
-                          }}
-                        >
-                          {getInitials(txn.from)}
-                        </Avatar>
-                        
-                        <Box>
-                          <Typography variant="body2" fontWeight="medium">
-                            {txn.from}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Pays
-                          </Typography>
-                        </Box>
-                      </Box>
-                      
-                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <Chip 
-                          label={`$${txn.amount}`} 
-                          color="primary" 
-                          size="small"
-                          sx={{ fontWeight: 'bold', mb: 0.5 }}
-                        />
-                        <ArrowForwardIcon color="action" fontSize="small" />
-                      </Box>
-                      
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Box sx={{ textAlign: 'right' }}>
-                          <Typography variant="body2" fontWeight="medium">
-                            {txn.to}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Receives
-                          </Typography>
-                        </Box>
-                        
-                        <Avatar 
-                          sx={{ 
-                            bgcolor: getParticipantColor(txn.to),
-                            width: 40,
-                            height: 40
-                          }}
-                        >
-                          {getInitials(txn.to)}
-                        </Avatar>
-                      </Box>
-                    </Box>
-                    
-                    {/* Payment Button */}
-                    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1.5 }}>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        startIcon={<QrCode2Icon />}
-                        onClick={() => handleOpenPaymentDialog(txn)}
-                      >
-                        Generate Payment QR
-                      </Button>
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
+            {settlementCards}
           </Grid>
         </Box>
       )}
@@ -302,7 +357,7 @@ export default function SettlementSection({ items, billInfo, participants, settl
           
           <Grid item>
             <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'primary.main' }}>
-              ${billInfo.totalAmount.toFixed(2)}
+              ${(typeof billInfo.totalAmount === 'number' ? billInfo.totalAmount : 0).toFixed(2)}
             </Typography>
           </Grid>
         </Grid>
@@ -316,44 +371,7 @@ export default function SettlementSection({ items, billInfo, participants, settl
             </Typography>
           </Grid>
           
-          {participants.map((participant) => {
-            const amountPaid = getParticipantTotal(participant.id);
-            const netBalance = amountPaid - participant.amountOwed;
-            const status = netBalance > 0 ? 'creditor' : netBalance < 0 ? 'debtor' : 'settled';
-            
-            return (
-              <Grid item xs={12} key={participant.id}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Avatar
-                      sx={{ 
-                        width: 24, 
-                        height: 24, 
-                        fontSize: '0.75rem',
-                        bgcolor: getParticipantColor(participant.name)
-                      }}
-                    >
-                      {getInitials(participant.name)}
-                    </Avatar>
-                    <Typography variant="body2">{participant.name}</Typography>
-                  </Box>
-                  
-                  <Box sx={{ display: 'flex', gap: 2 }}>
-                    <Typography 
-                      variant="body2" 
-                      sx={{ 
-                        color: status === 'creditor' ? 'success.main' : 
-                               status === 'debtor' ? 'error.main' : 'text.primary',
-                        fontWeight: 500
-                      }}
-                    >
-                      {netBalance > 0 ? '+' : ''}{netBalance.toFixed(2)}
-                    </Typography>
-                  </Box>
-                </Box>
-              </Grid>
-            );
-          })}
+          {participantSummaryItems}
         </Grid>
       </Paper>
 

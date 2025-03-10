@@ -387,13 +387,24 @@ export default function BillDetails({
 
       {/* Total Amount */}
       <TextField
-        label="Total Amount (auto or override)"
+        label="Total Amount"
         type="number"
         name="totalAmount"
-        value={billInfo.totalAmount}
-        onChange={handleChange}
+        value={billInfo.totalAmount || ''}
+        onChange={(e) => {
+          const value = e.target.value === '' ? 0 : Number(e.target.value);
+          setBillInfo(prev => ({
+            ...prev,
+            totalAmount: value
+          }));
+        }}
         fullWidth
         margin="dense"
+        InputProps={{
+          inputProps: { 
+            step: "0.01"
+          }
+        }}
       />
 
       {/* Bill Date + Location */}
@@ -494,7 +505,12 @@ export default function BillDetails({
               <Typography variant="caption" color="text.secondary" gutterBottom>
                 Advanced Upload with OCR+LLM:
               </Typography>
-              <EnhancedReceiptUpload onProcessComplete={handleProcessComplete} />
+              <EnhancedReceiptUpload onProcessComplete={data => {
+                if (data) {
+                  // Call onUploadReceipt with the full data object
+                  onUploadReceipt(data);
+                }
+              }} />
             </Box>
           </Grid>
           

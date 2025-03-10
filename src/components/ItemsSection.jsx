@@ -50,7 +50,91 @@ import {
   People as PeopleIcon,
 } from "@mui/icons-material";
 
+
 import ItemSplitControl from "./ItemSplitControl";
+
+// Helper functions
+const calculateItemTotal = (item) => {
+  const subtotal = Number((item.price * item.quantity).toFixed(2));
+  const taxAmount = Number(((subtotal * item.taxRate) / 100).toFixed(2));
+  return Number((subtotal + taxAmount).toFixed(2));
+};
+
+const calculateShares = (item, itemTotal, participants) => {
+  if (!participants.length) return {};
+  
+  switch (item.splitType) {
+    case "equal": {
+      const relevantIds = item.includedParticipants?.length
+        ? item.includedParticipants
+        : participants.map(p => p.id);
+      const share = itemTotal / (relevantIds.length || 1);
+      return Object.fromEntries(
+        participants.map(p => [
+          p.id,
+          relevantIds.includes(p.id) ? Number(share.toFixed(2)) : 0
+        ])
+      );
+    }
+    case "unequal-money":
+      return Object.fromEntries(
+        participants.map(p => [
+          p.id,
+          Number((item.splits[p.id] || 0).toFixed(2))
+        ])
+      );
+    case "unequal-percent": {
+      const totalPercent = Object.values(item.splits).reduce(
+        (sum, val) => sum + (parseFloat(val) || 0),
+        0
+      );
+      return Object.fromEntries(
+        participants.map(p => [
+          p.id,
+          totalPercent
+            ? Number(((itemTotal * (parseFloat(item.splits[p.id]) || 0)) / totalPercent).toFixed(2))
+            : 0
+        ])
+      );
+    }
+    case "unequal-shares": {
+      const totalShares = Object.values(item.splits).reduce(
+        (sum, val) => sum + (parseFloat(val) || 0),
+        0
+      );
+      return Object.fromEntries(
+        participants.map(p => [
+          p.id,
+          totalShares
+            ? Number(((itemTotal * (parseFloat(item.splits[p.id]) || 0)) / totalShares).toFixed(2))
+            : 0
+        ])
+      );
+    }
+    default:
+      return {};
+  }
+};
+
+// Memoized individual item component
+const BillItem = React.memo(({ 
+  item, 
+  onItemChange, 
+  onItemDelete, 
+  participants,
+  index 
+}) => {
+  // Memoize split calculations
+  const splitDetails = useMemo(() => {
+    const itemTotal = calculateItemTotal(item);
+    return {
+      total: itemTotal,
+      shares: calculateShares(item, itemTotal, participants)
+    };
+  }, [item, participants]);
+
+  
+});
 
 export default function ItemsSection({ items, setItems, participants }) {
   const theme = useTheme();
