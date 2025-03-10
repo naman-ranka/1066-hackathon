@@ -18,16 +18,27 @@ export async function processReceiptImage(imageFile) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    console.log(response);
-
     const data = await response.json();
     
-    // Extract the JSON from the bill property
+    // Extract the JSON from the bill property if it's in markdown format
     if (data.bill) {
+      // Try to match JSON inside markdown code block
       const jsonMatch = data.bill.match(/```json\n([\s\S]*)\n```/);
       if (jsonMatch && jsonMatch[1]) {
         return JSON.parse(jsonMatch[1]);
       }
+      // If not in markdown, try parsing the bill directly
+      try {
+        return typeof data.bill === 'string' ? JSON.parse(data.bill) : data.bill;
+      } catch (e) {
+        console.error('Failed to parse bill data:', e);
+        return data.bill;
+      }
+    }
+
+    // If no bill property, return the data itself if it's in the expected format
+    if (data.storeInformation && data.items) {
+      return data;
     }
 
     throw new Error('Invalid response format from server');
@@ -108,7 +119,29 @@ export async function processBillImages(imageFiles) {
     }
     
     const data = await response.json();
-    return data;
+
+    // Handle different response formats
+    if (data.bill) {
+      // Try to match JSON inside markdown code block
+      const jsonMatch = data.bill.match(/```json\n([\s\S]*)\n```/);
+      if (jsonMatch && jsonMatch[1]) {
+        return JSON.parse(jsonMatch[1]);
+      }
+      // If not in markdown, try parsing the bill directly
+      try {
+        return typeof data.bill === 'string' ? JSON.parse(data.bill) : data.bill;
+      } catch (e) {
+        console.error('Failed to parse bill data:', e);
+        return data.bill;
+      }
+    }
+
+    // If no bill property, return the data itself if it's in the expected format
+    if (data.storeInformation && data.items) {
+      return data;
+    }
+
+    throw new Error('Invalid response format from server');
   } catch (error) {
     console.error('Error in processBillImages:', error);
     throw error;

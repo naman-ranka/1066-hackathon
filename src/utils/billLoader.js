@@ -63,6 +63,52 @@ export const loadBillFromJson = (jsonData) => {
   }
 };
 
+export function handleJsonBillUpload(jsonData, callbacks) {
+  try {
+    const parsedData = loadBillFromJson(jsonData);
+    
+    if (parsedData.isValid) {
+      // Update bill info
+      if (callbacks.setBillInfo && parsedData.billInfo) {
+        callbacks.setBillInfo(parsedData.billInfo);
+      }
+
+      // Update items
+      if (callbacks.setItems && parsedData.items) {
+        callbacks.setItems(parsedData.items);
+      }
+
+      // Update participants if present
+      if (callbacks.setParticipants && parsedData.participants && parsedData.participants.length > 0) {
+        callbacks.setParticipants(prev => {
+          // Create a map of existing participants by ID
+          const existingMap = new Map(prev.map(p => [p.id, p]));
+          
+          // Update or add participants from the JSON
+          parsedData.participants.forEach(p => {
+            if (existingMap.has(p.id)) {
+              existingMap.set(p.id, { ...existingMap.get(p.id), ...p });
+            } else {
+              existingMap.set(p.id, p);
+            }
+          });
+          
+          return Array.from(existingMap.values());
+        });
+      }
+
+      return { success: true };
+    } else {
+      throw new Error(parsedData.error || 'Invalid JSON format');
+    }
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error.message 
+    };
+  }
+}
+
 // Example new JSON structure for reference
 export const sampleNewBillJson = {
   storeInformation: {
