@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useCallback, useRef } from "react";
+import debounce from 'lodash/debounce';
 import {
   Box,
   Typography,
@@ -57,38 +58,48 @@ export default function ItemsSection({ items, setItems, participants }) {
   const [expandedItemId, setExpandedItemId] = useState(null);
   const [viewMode, setViewMode] = useState(isMobile ? "card" : "table");
 
-  // --------------------------------------
-  // Utility Functions
-  // --------------------------------------
-  const calculateItemTotal = (item) => {
-    // Now just use price directly, not multiplied by quantity
-    const subtotal = item.price;
-    const taxAmount = (subtotal * item.taxRate) / 100;
-    return (subtotal + taxAmount).toFixed(2);
-  };
+  // Debounced setItems function
+  const debouncedSetItems = useRef(
+    debounce((newItems) => {
+      setItems(newItems);
+    }, 300)
+  ).current;
 
-  const calculateBillSubtotal = () => {
-    return items.reduce((acc, i) => acc + i.price, 0).toFixed(2);
-  };
-
-  const calculateBillTax = () => {
-    return items
-      .reduce((acc, i) => acc + (i.price * i.taxRate) / 100, 0)
-      .toFixed(2);
-  };
-
-  const calculateBillTotal = () => {
-    return (parseFloat(calculateBillSubtotal()) + parseFloat(calculateBillTax())).toFixed(2);
-  };
-
-  const toggleExpandItem = (itemId) => {
-    setExpandedItemId(expandedItemId === itemId ? null : itemId);
-  };
+  // Cleanup debounce on unmount
+  React.useEffect(() => {
+    return () => {
+      debouncedSetItems.cancel();
+    };
+  }, [debouncedSetItems]);
 
   // --------------------------------------
-  // Event Handlers
+  // Memoized Calculations
   // --------------------------------------
-  const handleAddItem = () => {
+  const itemTotals = useMemo(() => {
+    return items.reduce((acc, item) => {
+      const subtotal = item.price;
+      const taxAmount = (subtotal * item.taxRate) / 100;
+      acc[item.id] = (subtotal + taxAmount).toFixed(2);
+      return acc;
+    }, {});
+  }, [items]);
+
+  const billCalculations = useMemo(() => {
+    const subtotal = items.reduce((acc, i) => acc + i.price, 0);
+    const tax = items.reduce((acc, i) => acc + (i.price * i.taxRate) / 100, 0);
+    const total = subtotal + tax;
+    
+    return {
+      subtotal: subtotal.toFixed(2),
+      tax: tax.toFixed(2),
+      total: total.toFixed(2)
+    };
+  }, [items]);
+
+  // --------------------------------------
+  // Memoized Event Handlers
+  // --------------------------------------
+  const handleAddItem = useCallback(() => {
     const newItem = {
       id: Date.now(),
       name: "",
@@ -97,31 +108,30 @@ export default function ItemsSection({ items, setItems, participants }) {
       taxRate: 0,
       splitType: "equal",
       splits: {},
-      includedParticipants: participants.map(p => p.id), // Default to all participants
+      includedParticipants: participants.map(p => p.id),
     };
     
     setItems((prev) => [...prev, newItem]);
     
-    // Auto expand newly added item in card view
     if (viewMode === "card") {
       setExpandedItemId(newItem.id);
     }
-  };
+  }, [participants, viewMode, setItems]);
 
-  const handleRemoveItem = (id) => {
+  const handleRemoveItem = useCallback((id) => {
     setItems((prev) => prev.filter((item) => item.id !== id));
-  };
+  }, [setItems]);
 
-  const handleItemChange = (id, field, value) => {
+  const handleItemChange = useCallback((id, field, value) => {
     setItems((prev) =>
       prev.map((item) =>
         item.id === id ? { ...item, [field]: value } : item
       )
     );
-  };
+  }, [setItems]);
 
-  const handleItemSplitChange = (itemId, participantId, value) => {
-    setItems((prev) =>
+  const handleItemSplitChange = useCallback((itemId, participantId, value) => {
+    debouncedSetItems((prev) =>
       prev.map((item) => {
         if (item.id === itemId) {
           return {
@@ -132,179 +142,99 @@ export default function ItemsSection({ items, setItems, participants }) {
         return item;
       })
     );
-  };
+  }, [debouncedSetItems]);
 
-  const handleToggleEqualParticipant = (itemId, participantId) => {
+  const handleToggleEqualParticipant = useCallback((itemId, participantId) => {
     setItems((prev) =>
       prev.map((item) => {
         if (item.id === itemId) {
           const currentlyIncluded = item.includedParticipants || [];
-          let newIncluded;
-          if (currentlyIncluded.includes(participantId)) {
-            // Remove participant
-            newIncluded = currentlyIncluded.filter((id) => id !== participantId);
-          } else {
-            // Add participant
-            newIncluded = [...currentlyIncluded, participantId];
-          }
+          const newIncluded = currentlyIncluded.includes(participantId)
+            ? currentlyIncluded.filter((id) => id !== participantId)
+            : [...currentlyIncluded, participantId];
           return { ...item, includedParticipants: newIncluded };
         }
         return item;
       })
     );
-  };
+  }, [setItems]);
 
-  const handleSplitTypeChange = (itemId, newSplitType) => {
+  const handleSplitTypeChange = useCallback((itemId, value) => {
     setItems((prev) =>
       prev.map((item) => {
         if (item.id === itemId) {
-          // When changing from unequal to equal, convert all participants with non-zero splits to included
-          if (newSplitType === "equal" && item.splitType !== "equal") {
-            const newIncludedParticipants = Object.keys(item.splits || {})
-              .filter(id => item.splits[id] && item.splits[id] > 0)
-              .map(id => id);
-            
-            // If no participants would be included, include all by default
-            if (newIncludedParticipants.length === 0) {
-              return { 
-                ...item, 
-                splitType: newSplitType,
-                includedParticipants: participants.map(p => p.id)
-              };
-            }
-            
-            return { 
-              ...item, 
-              splitType: newSplitType,
-              includedParticipants: newIncludedParticipants
-            };
-          }
-          
-          return { ...item, splitType: newSplitType };
+          return {
+            ...item,
+            splitType: value,
+            splits: {},
+            includedParticipants: value === "equal" ? participants.map(p => p.id) : []
+          };
         }
         return item;
       })
     );
-  };
+  }, [participants]);
+
+  const toggleExpandItem = useCallback((itemId) => {
+    setExpandedItemId(expandedItemId === itemId ? null : itemId);
+  }, [expandedItemId]);
 
   // --------------------------------------
-  // Matrix View Quick Actions
+  // Memoized Quick Action Handlers
   // --------------------------------------
-  const markAllEqual = (item) => {
-    setItems((prev) =>
-      prev.map((i) => {
-        if (i.id === item.id) {
-          return {
-            ...i,
-            splitType: "equal",
-            includedParticipants: participants.map((p) => p.id),
-          };
-        }
-        return i;
-      })
-    );
-  };
-
-  const excludeAllFromItem = (item) => {
-    setItems((prev) =>
-      prev.map((i) => {
-        if (i.id === item.id) {
-          return {
-            ...i,
-            includedParticipants: [],
-          };
-        }
-        return i;
-      })
-    );
-  };
-
-  const splitEvenlyInMoney = (item) => {
-    const itemTotal = parseFloat(calculateItemTotal(item));
-    const perPersonAmount = participants.length > 0 
-      ? (itemTotal / participants.length).toFixed(2) 
-      : "0.00";
+  const quickActionHandlers = useMemo(() => ({
+    markAllEqual: (item) => {
+      setItems((prev) =>
+        prev.map((i) => 
+          i.id === item.id 
+            ? { ...i, splitType: "equal", includedParticipants: participants.map((p) => p.id) }
+            : i
+        )
+      );
+    },
+    excludeAllFromItem: (item) => {
+      setItems((prev) =>
+        prev.map((i) => 
+          i.id === item.id 
+            ? { ...i, includedParticipants: [] }
+            : i
+        )
+      );
+    },
+    splitEvenlyInMoney: (item) => {
+      const itemTotal = parseFloat(itemTotals[item.id]);
+      const perPersonAmount = participants.length > 0 
+        ? (itemTotal / participants.length).toFixed(2) 
+        : "0.00";
       
-    const newSplits = {};
-    participants.forEach(p => {
-      newSplits[p.id] = perPersonAmount;
-    });
-    
-    setItems((prev) =>
-      prev.map((i) => {
-        if (i.id === item.id) {
-          return {
-            ...i,
-            splitType: "unequal-money",
-            splits: newSplits
-          };
-        }
-        return i;
-      })
-    );
-  };
+      setItems((prev) =>
+        prev.map((i) => 
+          i.id === item.id 
+            ? { 
+                ...i, 
+                splitType: "unequal-money",
+                splits: Object.fromEntries(participants.map(p => [p.id, perPersonAmount]))
+              }
+            : i
+        )
+      );
+    }
+  }), [participants, setItems, itemTotals]);
 
-  const distributeByPercentage = (item) => {
-    const perPersonPercent = participants.length > 0 
-      ? (100 / participants.length).toFixed(2) 
-      : "0.00";
-      
-    const newSplits = {};
-    participants.forEach(p => {
-      newSplits[p.id] = perPersonPercent;
-    });
-    
-    setItems((prev) =>
-      prev.map((i) => {
-        if (i.id === item.id) {
-          return {
-            ...i,
-            splitType: "unequal-percent",
-            splits: newSplits
-          };
-        }
-        return i;
-      })
-    );
-  };
-
-  const distributeByShares = (item) => {
-    const perPersonShares = participants.length > 0 
-      ? "1" 
-      : "0";
-      
-    const newSplits = {};
-    participants.forEach(p => {
-      newSplits[p.id] = perPersonShares;
-    });
-    
-    setItems((prev) =>
-      prev.map((i) => {
-        if (i.id === item.id) {
-          return {
-            ...i,
-            splitType: "unequal-shares",
-            splits: newSplits
-          };
-        }
-        return i;
-      })
-    );
-  };
-
-  // Add these new quick action functions near other utility functions
-  const renderQuickActionButtons = (item) => {
-    // Different quick actions based on split type
+  // --------------------------------------
+  // Memoized Render Components
+  // --------------------------------------
+  const renderQuickActionButtons = useCallback((item) => {
     if (item.splitType === "equal") {
       return (
         <ButtonGroup size="small" variant="outlined" sx={{ '& .MuiButton-root': { minWidth: '28px', px: 0.5 } }}>
           <Tooltip title="Select All">
-            <Button onClick={() => markAllEqual(item)}>
+            <Button onClick={() => quickActionHandlers.markAllEqual(item)}>
               <SelectAllIcon sx={{ fontSize: "0.7rem" }} />
             </Button>
           </Tooltip>
           <Tooltip title="Exclude All">
-            <Button onClick={() => excludeAllFromItem(item)}>
+            <Button onClick={() => quickActionHandlers.excludeAllFromItem(item)}>
               <PersonRemoveIcon sx={{ fontSize: "0.7rem" }} />
             </Button>
           </Tooltip>
@@ -314,13 +244,13 @@ export default function ItemsSection({ items, setItems, participants }) {
       return (
         <ButtonGroup size="small" variant="outlined" sx={{ '& .MuiButton-root': { minWidth: '28px', px: 0.5 } }}>
           <Tooltip title="Split Evenly">
-            <Button onClick={() => splitEvenlyInMoney(item)}>
+            <Button onClick={() => quickActionHandlers.splitEvenlyInMoney(item)}>
               <MonetizationOnIcon sx={{ fontSize: "0.7rem" }} />
             </Button>
           </Tooltip>
           <Tooltip title="First Person Pays">
             <Button onClick={() => {
-              const totalAmount = parseFloat(calculateItemTotal(item));
+              const totalAmount = parseFloat(itemTotals[item.id]);
               const newSplits = {};
               participants.forEach((p, index) => {
                 newSplits[p.id] = index === 0 ? totalAmount.toFixed(2) : "0.00";
@@ -351,7 +281,7 @@ export default function ItemsSection({ items, setItems, participants }) {
       return (
         <ButtonGroup size="small" variant="outlined" sx={{ '& .MuiButton-root': { minWidth: '28px', px: 0.5 } }}>
           <Tooltip title="Split Evenly">
-            <Button onClick={() => distributeByPercentage(item)}>
+            <Button onClick={() => quickActionHandlers.splitEvenlyInMoney(item)}>
               %
             </Button>
           </Tooltip>
@@ -387,7 +317,7 @@ export default function ItemsSection({ items, setItems, participants }) {
       return (
         <ButtonGroup size="small" variant="outlined" sx={{ '& .MuiButton-root': { minWidth: '28px', px: 0.5 } }}>
           <Tooltip title="Split Evenly">
-            <Button onClick={() => distributeByShares(item)}>
+            <Button onClick={() => quickActionHandlers.splitEvenlyInMoney(item)}>
               <PeopleIcon sx={{ fontSize: "0.7rem" }} />
             </Button>
           </Tooltip>
@@ -421,10 +351,9 @@ export default function ItemsSection({ items, setItems, participants }) {
       );
     }
     return null;
-  };
+  }, [participants, quickActionHandlers, itemTotals, setItems]);
 
-  // Update the matrix view split type chips to be buttons
-  const renderSplitTypeButtons = (item) => {
+  const renderSplitTypeButtons = useCallback((item) => {
     return (
       <ButtonGroup size="small" variant="outlined">
         <Tooltip title="Equal Split">
@@ -465,10 +394,9 @@ export default function ItemsSection({ items, setItems, participants }) {
         </Tooltip>
       </ButtonGroup>
     );
-  };
+  }, []);
 
-  // Update the matrix view cell to include quick actions
-  const renderMatrixCell = (item, participant) => {
+  const renderMatrixCell = useCallback((item, participant) => {
     if (item.splitType === "equal") {
       const isIncluded = (item.includedParticipants || []).includes(participant.id);
       return (
@@ -506,7 +434,71 @@ export default function ItemsSection({ items, setItems, participants }) {
         />
       );
     }
-  };
+  }, [handleToggleEqualParticipant, handleItemSplitChange]);
+
+  // Memoize the matrix view header cells
+  const participantHeaderCells = useMemo(() => (
+    participants.map((participant) => (
+      <TableCell key={participant.id} align="center">
+        <Typography sx={{ fontSize: "0.75rem", fontWeight: 500 }}>
+          {participant.name}
+        </Typography>
+      </TableCell>
+    ))
+  ), [participants]);
+
+  // Memoize the bill summary component
+  const BillSummary = useMemo(() => (
+    <Paper 
+      variant="outlined" 
+      sx={{ 
+        p: 1.5, 
+        mt: 2, 
+        backgroundColor: theme.palette.background.default,
+        borderRadius: '8px',
+        boxShadow: '0 2px 6px rgba(0,0,0,0.05)'
+      }}
+    >
+      <Typography variant="subtitle2" sx={{ fontSize: "0.85rem", mb: 1, fontWeight: 600 }}>
+        Bill Summary
+      </Typography>
+      
+      <Grid container spacing={2}>
+        <Grid item xs={12} sm={4}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Typography sx={{ fontSize: "0.75rem", color: 'text.secondary' }}>
+              Subtotal:
+            </Typography>
+            <Typography sx={{ fontSize: "0.75rem", fontWeight: 500 }}>
+              ${billCalculations.subtotal}
+            </Typography>
+          </Box>
+        </Grid>
+        
+        <Grid item xs={12} sm={4}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Typography sx={{ fontSize: "0.75rem", color: 'text.secondary' }}>
+              Tax:
+            </Typography>
+            <Typography sx={{ fontSize: "0.75rem", fontWeight: 500 }}>
+              ${billCalculations.tax}
+            </Typography>
+          </Box>
+        </Grid>
+        
+        <Grid item xs={12} sm={4}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Typography sx={{ fontSize: "0.75rem", fontWeight: 600 }}>
+              Total:
+            </Typography>
+            <Typography sx={{ fontSize: "0.85rem", fontWeight: 600, color: 'primary.main' }}>
+              ${billCalculations.total}
+            </Typography>
+          </Box>
+        </Grid>
+      </Grid>
+    </Paper>
+  ), [theme, billCalculations]);
 
   // Update the matrix view to include the new buttons
   const renderMatrixView = () => {
@@ -606,13 +598,7 @@ export default function ItemsSection({ items, setItems, participants }) {
                   <TableCell sx={{ minWidth: '140px' }}>Item</TableCell>
                   <TableCell>Amount</TableCell>
                   <TableCell>Split</TableCell>
-                  {participants.map((participant) => (
-                    <TableCell key={participant.id} align="center">
-                      <Typography sx={{ fontSize: "0.75rem", fontWeight: 500 }}>
-                        {participant.name}
-                      </Typography>
-                    </TableCell>
-                  ))}
+                  {participantHeaderCells}
                   <TableCell>Actions</TableCell>
                 </TableRow>
               </TableHead>
@@ -650,7 +636,7 @@ export default function ItemsSection({ items, setItems, participants }) {
                       {/* Item Amount */}
                       <TableCell>
                         <Typography sx={{ fontSize: "0.75rem", fontWeight: 500 }}>
-                          ${calculateItemTotal(item)}
+                          ${itemTotals[item.id]}
                         </Typography>
                       </TableCell>
 
@@ -724,7 +710,7 @@ export default function ItemsSection({ items, setItems, participants }) {
         ) : (
           items.map((item) => {
             const isExpanded = expandedItemId === item.id;
-            const itemTotal = calculateItemTotal(item);
+            const itemTotal = itemTotals[item.id];
             
             return (
               <Card 
@@ -928,7 +914,7 @@ export default function ItemsSection({ items, setItems, participants }) {
 
               <TableBody>
                 {items.map((item) => {
-                  const itemTotal = calculateItemTotal(item);
+                  const itemTotal = itemTotals[item.id];
 
                   return (
                     <TableRow
@@ -1133,55 +1119,7 @@ export default function ItemsSection({ items, setItems, participants }) {
        viewMode === 'card' ? renderCardView() : renderMatrixView()}
 
       {/* Bill Summary */}
-      <Paper 
-        variant="outlined" 
-        sx={{ 
-          p: 1.5, 
-          mt: 2, 
-          backgroundColor: theme.palette.background.default,
-          borderRadius: '8px',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.05)'
-        }}
-      >
-        <Typography variant="subtitle2" sx={{ fontSize: "0.85rem", mb: 1, fontWeight: 600 }}>
-          Bill Summary
-        </Typography>
-        
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={4}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Typography sx={{ fontSize: "0.75rem", color: 'text.secondary' }}>
-                Subtotal:
-              </Typography>
-              <Typography sx={{ fontSize: "0.75rem", fontWeight: 500 }}>
-                ${calculateBillSubtotal()}
-              </Typography>
-            </Box>
-          </Grid>
-          
-          <Grid item xs={12} sm={4}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Typography sx={{ fontSize: "0.75rem", color: 'text.secondary' }}>
-                Tax:
-              </Typography>
-              <Typography sx={{ fontSize: "0.75rem", fontWeight: 500 }}>
-                ${calculateBillTax()}
-              </Typography>
-            </Box>
-          </Grid>
-          
-          <Grid item xs={12} sm={4}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Typography sx={{ fontSize: "0.75rem", fontWeight: 600 }}>
-                Total:
-              </Typography>
-              <Typography sx={{ fontSize: "0.85rem", fontWeight: 600, color: 'primary.main' }}>
-                ${calculateBillTotal()}
-              </Typography>
-            </Box>
-          </Grid>
-        </Grid>
-      </Paper>
+      {BillSummary}
     </Box>
   );
 }
