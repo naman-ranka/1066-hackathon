@@ -31,6 +31,21 @@ import {
   Select,
   MenuItem,
   ButtonGroup,
+  InputLabel,
+  FormControl,
+  FormHelperText,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Slide,
+  RadioGroup,
+  Radio,
+  Slider,
+  Accordion,
+  FormLabel
+  
+
 } from "@mui/material";
 import {
   Delete as DeleteIcon,
@@ -48,7 +63,9 @@ import {
   SelectAll as SelectAllIcon,
   Cached as CachedIcon,
   People as PeopleIcon,
+  
 } from "@mui/icons-material";
+
 
 
 import ItemSplitControl from "./ItemSplitControl";
@@ -136,11 +153,21 @@ const BillItem = React.memo(({
   
 });
 
+
+
 export default function ItemsSection({ items, setItems, participants }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [expandedItemId, setExpandedItemId] = useState(null);
   const [viewMode, setViewMode] = useState(isMobile ? "card" : "table");
+
+  const [taxDialogOpen, setTaxDialogOpen] = useState(false);
+  const [taxCalculationMethod, setTaxCalculationMethod] = useState("basedOnRate"); 
+  // "basedOnRate" = user provides a tax rate (%) for each item
+  // "basedOnFinalTotal" = user provides the final bill total (incl. tax)
+  //    from which we derive each item's taxRate proportionally
+
+  const [taxInput, setTaxInput] = useState("");
 
   // Debounced setItems function
   const debouncedSetItems = useRef(
@@ -304,6 +331,73 @@ export default function ItemsSection({ items, setItems, participants }) {
       );
     }
   }), [participants, setItems, itemTotals]);
+
+
+  const handleApplyTax = useCallback(() => {
+    const inputValue = parseFloat(taxInput) || 0;
+  
+    if (taxCalculationMethod === "basedOnRate") {
+      // If user provides a direct tax rate (%) for all items
+      setItems((prevItems) =>
+        prevItems.map((item) => ({
+          ...item,
+          taxRate: inputValue,
+        }))
+      );
+    } else if (taxCalculationMethod === "basedOnFinalTotal") {
+      // If user provides the *final* total (subtotal + tax)
+      const currentSubTotal = items.reduce((acc, i) => acc + i.price, 0);
+      if (inputValue <= currentSubTotal) {
+        // If the final total is less or equal to subtotal, set taxRate = 0
+        setItems((prevItems) =>
+          prevItems.map((item) => ({
+            ...item,
+            taxRate: 0,
+          }))
+        );
+      } else {
+        // Distribute the difference (taxOverSubtotal) proportionally
+        const taxOverSubtotal = inputValue - currentSubTotal;
+        setItems((prevItems) => {
+          return prevItems.map((item) => {
+            if (!currentSubTotal) {
+              return { ...item, taxRate: 0 };
+            }
+            const itemTaxAmount =
+              (item.price / currentSubTotal) * taxOverSubtotal;
+            const newRate = (itemTaxAmount / item.price) * 100;
+            return { ...item, taxRate: parseFloat(newRate.toFixed(2)) };
+          });
+        });
+      }
+    } else if (taxCalculationMethod === "basedOnTaxAmount") {
+      // If user provides a total tax amount in dollars (e.g., $50)
+      const currentSubTotal = items.reduce((acc, i) => acc + i.price, 0);
+      if (!currentSubTotal || inputValue <= 0) {
+        // If no subtotal or invalid tax, set all taxRate=0
+        setItems((prevItems) =>
+          prevItems.map((item) => ({
+            ...item,
+            taxRate: 0,
+          }))
+        );
+      } else {
+        // Distribute the specified tax across items proportionally
+        setItems((prevItems) =>
+          prevItems.map((item) => {
+            const itemTaxAmount =
+              (item.price / currentSubTotal) * inputValue;
+            const newRate = (itemTaxAmount / item.price) * 100;
+            return { ...item, taxRate: parseFloat(newRate.toFixed(2)) };
+          })
+        );
+      }
+    }
+  
+    // Close the dialog at the end
+    setTaxDialogOpen(false);
+  }, [taxCalculationMethod, taxInput, items, setItems]);
+  
 
   // --------------------------------------
   // Memoized Render Components
@@ -1197,6 +1291,98 @@ export default function ItemsSection({ items, setItems, participants }) {
           </ToggleButton>
         </ToggleButtonGroup>
       </Box>
+
+      <Button
+        variant="contained"
+        size="small"
+        onClick={() => setTaxDialogOpen(true)}
+        sx={{ mt: 1 }}
+      >
+        Open Tax Calculation
+      </Button>
+
+      <Dialog open={taxDialogOpen} onClose={() => setTaxDialogOpen(false)}>
+        <DialogTitle>Tax Calculation</DialogTitle>
+        <DialogContent dividers>
+          <FormControl component="fieldset" sx={{ mb: 2 }}>
+            <FormLabel component="legend" sx={{ fontSize: "0.85rem" }}>
+              Calculation Method
+            </FormLabel>
+            <RadioGroup
+              row
+              value={taxCalculationMethod}
+              onChange={(e) => setTaxCalculationMethod(e.target.value)}
+            >
+              <FormControlLabel
+                value="basedOnRate"
+                control={<Radio size="small" />}
+                label="Based on Tax Rate (%)"
+                sx={{ mr: 2 }}
+              />
+              <FormControlLabel
+                value="basedOnFinalTotal"
+                control={<Radio size="small" />}
+                label="Based on Final Total"
+                sx={{ mr: 2 }}
+              />
+              <FormControlLabel
+                value="basedOnTaxAmount"
+                control={<Radio size="small" />}
+                label="Based on Tax Amount ($)"
+              />
+            </RadioGroup>
+          </FormControl>
+
+          {taxCalculationMethod === "basedOnRate" && (
+            <TextField
+              label="Tax Rate (%)"
+              type="number"
+              size="small"
+              fullWidth
+              value={taxInput}
+              onChange={(e) => setTaxInput(e.target.value)}
+              InputProps={{
+                endAdornment: <InputAdornment position="end">%</InputAdornment>,
+              }}
+            />
+          )}
+
+          {taxCalculationMethod === "basedOnFinalTotal" && (
+            <TextField
+              label="Final Bill Total (incl. tax)"
+              type="number"
+              size="small"
+              fullWidth
+              value={taxInput}
+              onChange={(e) => setTaxInput(e.target.value)}
+              InputProps={{
+                startAdornment: <InputAdornment position="start">$</InputAdornment>,
+              }}
+            />
+          )}
+
+          {taxCalculationMethod === "basedOnTaxAmount" && (
+            <TextField
+              label="Total Tax Amount"
+              type="number"
+              size="small"
+              fullWidth
+              value={taxInput}
+              onChange={(e) => setTaxInput(e.target.value)}
+              InputProps={{
+                startAdornment: <InputAdornment position="start">$</InputAdornment>,
+              }}
+            />
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setTaxDialogOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleApplyTax}>
+            Apply
+          </Button>
+        </DialogActions>
+      </Dialog>
+
 
       {/* Render either table, card, or matrix view based on viewMode */}
       {viewMode === 'table' ? renderTableView() : 
